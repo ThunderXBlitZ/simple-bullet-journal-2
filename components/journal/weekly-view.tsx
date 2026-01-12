@@ -60,8 +60,8 @@ export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
       </div>
 
       {/* Week Grid */}
-      <div className="flex-1 overflow-y-auto py-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 gap-4 pb-6">
+      <div className="flex-1 overflow-y-auto py-4 flex flex-col">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6">
           {days.map((day) => {
             const dateStr = format(day, "yyyy-MM-dd")
             const log = getDailyLog(dateStr)
@@ -105,12 +105,11 @@ export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
               </button>
             )
           })}
+        </div>
 
-          {/* Quote Sidebar - Desktop Only */}
-          <div className="hidden lg:flex flex-col items-center justify-center gap-3 rounded-lg border border-border/50 p-4 text-center">
-            <div className="text-5xl font-mono">:D</div>
-            <p className="text-sm font-serif text-muted-foreground leading-snug">{quote}</p>
-          </div>
+        {/* Inspiration Quote */}
+        <div className="py-2 border-t border-border text-center">
+          <p className="text-sm font-serif text-muted-foreground italic">{quote}</p>
         </div>
 
         {/* Legend */}

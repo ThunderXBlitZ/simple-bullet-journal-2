@@ -287,6 +287,10 @@ export function HabitTracker() {
               )
             })}
           </div>
+          {/* Inspiration Quote */}
+          <div className="py-2 border-t border-border text-center">
+            <p className="text-sm font-serif text-muted-foreground italic">{quote}</p>
+          </div>
         )}
       </div>
     </div>

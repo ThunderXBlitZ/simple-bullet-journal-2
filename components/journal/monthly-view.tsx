@@ -162,6 +162,11 @@ export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
           })}
         </div>
 
+        {/* Inspiration Quote */}
+        <div className="py-2 border-t border-border text-center">
+          <p className="text-sm font-serif text-muted-foreground italic">{quote}</p>
+        </div>
+
         {/* Legend */}
         <div className="mt-6 flex flex-wrap gap-4 text-xs text-muted-foreground border-t border-border pt-4">
           <span>• Task</span>

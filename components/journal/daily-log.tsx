@@ -136,6 +136,11 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
         )}
       </div>
 
+      {/* Inspiration Quote */}
+      <div className="py-2 border-t border-border text-center">
+        <p className="text-sm font-serif text-muted-foreground italic">{quote}</p>
+      </div>
+
       {/* Legend */}
       <div className="py-2 border-t border-border flex flex-wrap gap-3 md:gap-4 text-xs text-muted-foreground">
         <span>• Task</span>
