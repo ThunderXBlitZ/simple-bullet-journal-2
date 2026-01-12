@@ -16,6 +16,7 @@ import {
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
+import { getRandomQuote } from "@/lib/quotes"
 import { cn } from "@/lib/utils"
 
 interface MonthlyViewProps {
@@ -24,6 +25,7 @@ interface MonthlyViewProps {
 
 export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [quote, setQuote] = useState(() => getRandomQuote())
   const { getDailyLog, habits, habitCompletions, tags } = useJournalStore()
 
   const monthStart = startOfMonth(currentMonth)
@@ -33,26 +35,43 @@ export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
 
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
-  const goPrevMonth = () => setCurrentMonth((m) => subMonths(m, 1))
-  const goNextMonth = () => setCurrentMonth((m) => addMonths(m, 1))
-  const goThisMonth = () => setCurrentMonth(new Date())
+  const goPrevMonth = () => {
+    setCurrentMonth((m) => subMonths(m, 1))
+    setQuote(getRandomQuote())
+  }
+  const goNextMonth = () => {
+    setCurrentMonth((m) => addMonths(m, 1))
+    setQuote(getRandomQuote())
+  }
+  const goThisMonth = () => {
+    setCurrentMonth(new Date())
+    setQuote(getRandomQuote())
+  }
 
   const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={goPrevMonth}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" onClick={goThisMonth} className="font-serif text-lg">
-            {format(currentMonth, "MMMM yyyy")}
-          </Button>
-          <Button variant="ghost" size="icon" onClick={goNextMonth}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+      <div className="pb-2 border-b border-border">
+        <div className="flex items-center justify-between gap-2">
+          <div className="md:hidden font-serif text-sm font-semibold text-foreground">My Bullet Journal</div>
+
+          <div className="flex items-center gap-1 md:gap-2 ml-auto">
+            <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goPrevMonth}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={goThisMonth}
+              className="font-serif text-base md:text-lg whitespace-nowrap"
+            >
+              {format(currentMonth, "MMMM yyyy")}
+            </Button>
+            <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goNextMonth}>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 

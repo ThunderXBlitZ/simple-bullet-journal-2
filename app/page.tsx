@@ -78,10 +78,6 @@ export default function Home() {
           "pb-16 md:pb-8", // Extra padding for mobile nav
         )}
       >
-        {/* Mobile Title */}
-        <div className="md:hidden text-right mb-4">
-          <h1 className="font-serif text-lg font-semibold text-foreground">My Bullet Journal</h1>
-        </div>
         <div className="flex-1 overflow-y-auto max-w-4xl mx-auto w-full">{renderView()}</div>
       </main>
 

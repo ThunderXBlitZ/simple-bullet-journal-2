@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Plus, Trash2, Flame } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useJournalStore } from "@/lib/journal-store"
+import { getRandomQuote } from "@/lib/quotes"
 import { cn } from "@/lib/utils"
 
 const defaultIcons = ["📚", "💪", "🧘", "💧", "🏃", "✍️", "🎯", "💤"]
@@ -18,6 +19,7 @@ export function HabitTracker() {
   const [selectedIcon, setSelectedIcon] = useState(defaultIcons[0])
   const [selectedColor, setSelectedColor] = useState(defaultColors[0])
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const [quote, setQuote] = useState(() => getRandomQuote())
 
   const { habits, habitCompletions, addHabit, deleteHabit, toggleHabitCompletion, getHabitStreak, reorderHabits } = useJournalStore()
 
@@ -25,9 +27,18 @@ export function HabitTracker() {
   const monthEnd = endOfMonth(currentMonth)
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
 
-  const goPrevMonth = () => setCurrentMonth((m) => subMonths(m, 1))
-  const goNextMonth = () => setCurrentMonth((m) => addMonths(m, 1))
-  const goThisMonth = () => setCurrentMonth(new Date())
+  const goPrevMonth = () => {
+    setCurrentMonth((m) => subMonths(m, 1))
+    setQuote(getRandomQuote())
+  }
+  const goNextMonth = () => {
+    setCurrentMonth((m) => addMonths(m, 1))
+    setQuote(getRandomQuote())
+  }
+  const goThisMonth = () => {
+    setCurrentMonth(new Date())
+    setQuote(getRandomQuote())
+  }
 
   const handleAddHabit = () => {
     if (newHabitName.trim()) {
@@ -77,17 +88,25 @@ export function HabitTracker() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={goPrevMonth}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" onClick={goThisMonth} className="font-serif text-lg">
-            {format(currentMonth, "MMMM yyyy")}
-          </Button>
-          <Button variant="ghost" size="icon" onClick={goNextMonth}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+      <div className="pb-2 border-b border-border">
+        <div className="flex items-center justify-between gap-2">
+          <div className="md:hidden font-serif text-sm font-semibold text-foreground">My Bullet Journal</div>
+
+          <div className="flex items-center gap-1 md:gap-2 ml-auto">
+            <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goPrevMonth}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={goThisMonth}
+              className="font-serif text-base md:text-lg whitespace-nowrap"
+            >
+              {format(currentMonth, "MMMM yyyy")}
+            </Button>
+            <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goNextMonth}>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -167,9 +186,9 @@ export function HabitTracker() {
       <div className="flex-1 overflow-x-auto py-4">
         {habits.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <CheckSquareIcon className="w-12 h-12 mb-2 opacity-50" />
-            <p className="font-serif">No habits yet</p>
-            <p className="text-sm">Add a habit to start tracking</p>
+            <div className="text-6xl mb-4 font-mono">o_o</div>
+            <p className="text-lg font-serif">{quote}</p>
+            <p className="text-xs text-muted-foreground/60">Add a habit to start tracking</p>
           </div>
         ) : (
           <div className="min-w-[600px]">

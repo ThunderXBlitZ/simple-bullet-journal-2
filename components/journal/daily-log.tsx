@@ -5,6 +5,7 @@ import { format, addDays, subDays, isToday } from "date-fns"
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
+import { getRandomQuote } from "@/lib/quotes"
 import type { BulletType } from "@/lib/types"
 import { EntryInput } from "./entry-input"
 import { EntryItem } from "./entry-item"
@@ -17,6 +18,7 @@ interface DailyLogProps {
 
 export function DailyLog({ className, initialDate }: DailyLogProps) {
   const [currentDate, setCurrentDate] = useState(initialDate || new Date())
+  const [quote, setQuote] = useState(() => getRandomQuote())
   const dateStr = format(currentDate, "yyyy-MM-dd")
 
   const {
@@ -32,9 +34,18 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
 
   const dailyLog = getDailyLog(dateStr)
 
-  const goToToday = () => setCurrentDate(new Date())
-  const goPrevDay = () => setCurrentDate((d) => subDays(d, 1))
-  const goNextDay = () => setCurrentDate((d) => addDays(d, 1))
+  const goToToday = () => {
+    setCurrentDate(new Date())
+    setQuote(getRandomQuote())
+  }
+  const goPrevDay = () => {
+    setCurrentDate((d) => subDays(d, 1))
+    setQuote(getRandomQuote())
+  }
+  const goNextDay = () => {
+    setCurrentDate((d) => addDays(d, 1))
+    setQuote(getRandomQuote())
+  }
 
   const handleAddEntry = (type: BulletType, content: string, indent: number, tagIds?: string[], title?: string) => {
     addEntry(dateStr, type, content, indent, tagIds, title)
@@ -63,6 +74,8 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
       {/* Header */}
       <div className="pb-2 border-b border-border">
         <div className="flex items-center justify-between gap-2">
+          <div className="md:hidden font-serif text-sm font-semibold text-foreground">My Bullet Journal</div>
+
           {showMigrate && (
             <Button variant="outline" size="sm" onClick={handleMigrate} className="text-xs bg-transparent flex-shrink-0">
               <ArrowRight className="w-3 h-3 mr-1" />
@@ -99,20 +112,28 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
 
       {/* Entries */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden pb-4">
-        <div className="space-y-0.5 pt-2">
-          {dailyLog.entries.map((entry, index) => (
-            <EntryItem
-              key={entry.id}
-              entry={entry}
-              date={dateStr}
-              index={index}
-              onUpdate={(updates) => updateEntry(dateStr, entry.id, updates)}
-              onDelete={() => deleteEntry(dateStr, entry.id)}
-              onCycleStatus={() => cycleStatus(dateStr, entry.id)}
-              onReorder={(fromIndex, toIndex) => reorderEntries(dateStr, fromIndex, toIndex)}
-            />
-          ))}
-        </div>
+        {dailyLog.entries.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+            <div className="text-6xl mb-4 font-mono">^_^</div>
+            <p className="text-lg font-serif">{quote}</p>
+            <p className="text-xs text-muted-foreground/60">Start logging your day above</p>
+          </div>
+        ) : (
+          <div className="space-y-0.5 pt-2">
+            {dailyLog.entries.map((entry, index) => (
+              <EntryItem
+                key={entry.id}
+                entry={entry}
+                date={dateStr}
+                index={index}
+                onUpdate={(updates) => updateEntry(dateStr, entry.id, updates)}
+                onDelete={() => deleteEntry(dateStr, entry.id)}
+                onCycleStatus={() => cycleStatus(dateStr, entry.id)}
+                onReorder={(fromIndex, toIndex) => reorderEntries(dateStr, fromIndex, toIndex)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Legend */}

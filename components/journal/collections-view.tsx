@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useJournalStore } from "@/lib/journal-store"
+import { getRandomQuote } from "@/lib/quotes"
 import { cn } from "@/lib/utils"
 
 const templateOptions = [
@@ -25,6 +26,7 @@ export function CollectionsView() {
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null)
   const [newItemContent, setNewItemContent] = useState("")
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null)
+  const [quote, setQuote] = useState(() => getRandomQuote())
 
   const {
     collections,
@@ -170,14 +172,22 @@ export function CollectionsView() {
       <div className="flex-1 overflow-y-auto py-4">
         {collections.length === 0 && !isAdding ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <ListIcon className="w-12 h-12 mb-2 opacity-50" />
-            <p className="font-serif">No collections yet</p>
-            <p className="text-sm">Create a collection to organize your lists</p>
+            <div className="text-6xl mb-4 font-mono">:)</div>
+            <p className="text-lg font-serif">{quote}</p>
+            <p className="text-xs text-muted-foreground/60">Create one to organize your world</p>
           </div>
         ) : selectedCollection && activeCollection ? (
           // Collection Detail View
           <div>
-            <Button variant="ghost" size="sm" onClick={() => setSelectedCollection(null)} className="mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedCollection(null)
+                setQuote(getRandomQuote())
+              }}
+              className="mb-4"
+            >
               ← Back to collections
             </Button>
 
@@ -192,7 +202,14 @@ export function CollectionsView() {
             </div>
 
             <div className="space-y-1 mb-4">
-              {activeCollection.items.map((item) => (
+              {activeCollection.items.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <div className="text-5xl mb-3 font-mono">o_o</div>
+                  <p className="text-sm font-serif">{quote}</p>
+                  <p className="text-xs text-muted-foreground/60">Add an item to get started</p>
+                </div>
+              ) : (
+                activeCollection.items.map((item) => (
                 <div
                   key={item.id}
                   draggable
@@ -240,7 +257,8 @@ export function CollectionsView() {
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-              ))}
+                ))
+              )}
             </div>
 
             <div className="flex gap-2">
@@ -268,7 +286,10 @@ export function CollectionsView() {
                 <div
                   key={collection.id}
                   className="border border-border rounded-lg p-4 hover:border-primary/50 transition-colors cursor-pointer group"
-                  onClick={() => setSelectedCollection(collection.id)}
+                  onClick={() => {
+                    setSelectedCollection(collection.id)
+                    setQuote(getRandomQuote())
+                  }}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <span className="text-2xl">{collection.icon}</span>

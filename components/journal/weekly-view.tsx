@@ -5,6 +5,7 @@ import { format, startOfWeek, addDays, subWeeks, addWeeks, isToday } from "date-
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
+import { getRandomQuote } from "@/lib/quotes"
 import { EntryItem } from "./entry-item"
 import { cn } from "@/lib/utils"
 
@@ -14,35 +15,53 @@ interface WeeklyViewProps {
 
 export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const [quote, setQuote] = useState(() => getRandomQuote())
 
   const { getDailyLog, updateEntry, deleteEntry, cycleStatus } = useJournalStore()
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
-  const goPrevWeek = () => setWeekStart((w) => subWeeks(w, 1))
-  const goNextWeek = () => setWeekStart((w) => addWeeks(w, 1))
-  const goThisWeek = () => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const goPrevWeek = () => {
+    setWeekStart((w) => subWeeks(w, 1))
+    setQuote(getRandomQuote())
+  }
+  const goNextWeek = () => {
+    setWeekStart((w) => addWeeks(w, 1))
+    setQuote(getRandomQuote())
+  }
+  const goThisWeek = () => {
+    setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))
+    setQuote(getRandomQuote())
+  }
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={goPrevWeek}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" onClick={goThisWeek} className="font-serif text-lg">
-            Week of {format(weekStart, "MMM d")}
-          </Button>
-          <Button variant="ghost" size="icon" onClick={goNextWeek}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+      <div className="pb-2 border-b border-border">
+        <div className="flex items-center justify-between gap-2">
+          <div className="md:hidden font-serif text-sm font-semibold text-foreground">My Bullet Journal</div>
+
+          <div className="flex items-center gap-1 md:gap-2 ml-auto">
+            <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goPrevWeek}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={goThisWeek}
+              className="font-serif text-base md:text-lg whitespace-nowrap"
+            >
+              Week of {format(weekStart, "MMM d")}
+            </Button>
+            <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goNextWeek}>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Week Grid */}
       <div className="flex-1 overflow-y-auto py-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 pb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 gap-4 pb-6">
           {days.map((day) => {
             const dateStr = format(day, "yyyy-MM-dd")
             const log = getDailyLog(dateStr)
@@ -86,6 +105,12 @@ export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
               </button>
             )
           })}
+
+          {/* Quote Sidebar - Desktop Only */}
+          <div className="hidden lg:flex flex-col items-center justify-center gap-3 rounded-lg border border-border/50 p-4 text-center">
+            <div className="text-5xl font-mono">:D</div>
+            <p className="text-sm font-serif text-muted-foreground leading-snug">{quote}</p>
+          </div>
         </div>
 
         {/* Legend */}

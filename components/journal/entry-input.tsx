@@ -51,13 +51,6 @@ export function EntryInput({
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (e.key === "Escape") {
       onCancel?.()
-    } else if (e.key === "Tab" && e.currentTarget instanceof HTMLTextAreaElement) {
-      e.preventDefault()
-      if (e.shiftKey) {
-        setIndent(Math.max(0, indent - 1))
-      } else {
-        setIndent(Math.min(3, indent + 1))
-      }
     }
   }
 
@@ -101,22 +94,32 @@ export function EntryInput({
             />
           )}
         </div>
+
+        {/* Save Button - Always visible when title is filled */}
+        {title.trim() && (
+          <button
+            onClick={handleSubmit}
+            disabled={!content.trim()}
+            className={cn(
+              "flex-shrink-0 p-2 rounded transition-colors",
+              content.trim()
+                ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+            )}
+            title="Save entry"
+          >
+            <Check className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
-      {/* Actions */}
+      {/* Actions Row - Tags and hint text */}
       {title.trim() && content.trim() && (
         <>
           <div className="flex items-center gap-2 ml-6">
             <span className="text-xs text-muted-foreground">
-              Tab to indent
+              Click icon to change type
             </span>
-            <button
-              onClick={handleSubmit}
-              className="ml-auto text-xs bg-primary text-primary-foreground px-2 py-1 rounded hover:bg-primary/90 transition-colors flex items-center gap-1"
-            >
-              <Check className="w-3 h-3" />
-              Save
-            </button>
           </div>
 
           {/* Tag Selector */}
