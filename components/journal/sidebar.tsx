@@ -138,7 +138,7 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, className }:
         </Button>
 
         {/* Zoom Controls */}
-        <div className={cn("flex gap-1", isCollapsed ? "flex-col items-center" : "gap-1")}>
+        <div className={cn("flex gap-1", isCollapsed ? "flex-col items-center" : " justify-center gap-1")}>
           <Button
             variant="ghost"
             size="icon"
