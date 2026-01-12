@@ -8,15 +8,15 @@ import { useJournalStore } from "@/lib/journal-store"
 import type { BulletType } from "@/lib/types"
 import { EntryInput } from "./entry-input"
 import { EntryItem } from "./entry-item"
-import { MoodSelector } from "./mood-selector"
 import { cn } from "@/lib/utils"
 
 interface DailyLogProps {
   className?: string
+  initialDate?: Date
 }
 
-export function DailyLog({ className }: DailyLogProps) {
-  const [currentDate, setCurrentDate] = useState(new Date())
+export function DailyLog({ className, initialDate }: DailyLogProps) {
+  const [currentDate, setCurrentDate] = useState(initialDate || new Date())
   const dateStr = format(currentDate, "yyyy-MM-dd")
 
   const {
@@ -25,9 +25,9 @@ export function DailyLog({ className }: DailyLogProps) {
     updateEntry,
     deleteEntry,
     cycleStatus,
-    setMood,
-    setGratitude,
     migrateIncompleteTasks,
+    settings,
+    reorderEntries,
   } = useJournalStore()
 
   const dailyLog = getDailyLog(dateStr)
@@ -36,8 +36,8 @@ export function DailyLog({ className }: DailyLogProps) {
   const goPrevDay = () => setCurrentDate((d) => subDays(d, 1))
   const goNextDay = () => setCurrentDate((d) => addDays(d, 1))
 
-  const handleAddEntry = (type: BulletType, content: string, indent: number) => {
-    addEntry(dateStr, type, content, indent)
+  const handleAddEntry = (type: BulletType, content: string, indent: number, tagIds?: string[], title?: string) => {
+    addEntry(dateStr, type, content, indent, tagIds, title)
   }
 
   const handleMigrate = () => {
@@ -53,71 +53,70 @@ export function DailyLog({ className }: DailyLogProps) {
   const showMigrate = dateStr !== todayStr && incompleteTasks.length > 0
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
+    <div
+      className={cn("flex flex-col h-full", className)}
+      style={{
+        "--zoom": settings.zoomLevel,
+        fontSize: `${settings.zoomLevel * 100}%`
+      } as React.CSSProperties & { "--zoom": number }}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={goPrevDay}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={goToToday}
-            className={cn("font-serif text-lg", isToday(currentDate) && "text-primary font-semibold")}
-          >
-            {format(currentDate, "EEEE, MMMM d")}
-            {isToday(currentDate) && (
-              <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Today</span>
-            )}
-          </Button>
-          <Button variant="ghost" size="icon" onClick={goNextDay}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-4">
+      <div className="pb-2 border-b border-border">
+        <div className="flex items-center justify-between gap-2">
           {showMigrate && (
-            <Button variant="outline" size="sm" onClick={handleMigrate} className="text-xs bg-transparent">
+            <Button variant="outline" size="sm" onClick={handleMigrate} className="text-xs bg-transparent flex-shrink-0">
               <ArrowRight className="w-3 h-3 mr-1" />
-              Migrate {incompleteTasks.length} task{incompleteTasks.length > 1 ? "s" : ""}
+              <span className="hidden sm:inline">Migrate</span>
+              <span className="sm:hidden">{incompleteTasks.length}</span>
             </Button>
           )}
-          <MoodSelector value={dailyLog.mood} onChange={(mood) => setMood(dateStr, mood)} />
+
+          <div className="flex items-center gap-1 md:gap-2 ml-auto">
+            <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goPrevDay}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={goToToday}
+              className={cn("font-serif text-base md:text-lg whitespace-nowrap", isToday(currentDate) && "text-primary font-semibold")}
+            >
+              {format(currentDate, "EEEE, MMM d")}
+              {isToday(currentDate) && (
+                <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full hidden sm:inline">Today</span>
+              )}
+            </Button>
+            <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goNextDay}>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Gratitude */}
-      <div className="py-4 border-b border-border">
-        <label className="text-sm text-muted-foreground font-serif block mb-2">Gratitude</label>
-        <textarea
-          value={dailyLog.gratitude || ""}
-          onChange={(e) => setGratitude(dateStr, e.target.value)}
-          placeholder="What are you grateful for today?"
-          className="w-full bg-transparent border-none outline-none resize-none text-foreground placeholder:text-muted-foreground/50 font-serif text-base min-h-[60px]"
-        />
+      {/* Input Section */}
+      <div className="px-0 py-2 border-b border-dashed border-border">
+        <EntryInput onSubmit={handleAddEntry} />
       </div>
 
       {/* Entries */}
-      <div className="flex-1 overflow-y-auto py-4">
-        <div className="space-y-0.5">
-          {dailyLog.entries.map((entry) => (
+      <div className="flex-1 overflow-y-auto overflow-x-hidden pb-4">
+        <div className="space-y-0.5 pt-2">
+          {dailyLog.entries.map((entry, index) => (
             <EntryItem
               key={entry.id}
               entry={entry}
+              date={dateStr}
+              index={index}
               onUpdate={(updates) => updateEntry(dateStr, entry.id, updates)}
               onDelete={() => deleteEntry(dateStr, entry.id)}
               onCycleStatus={() => cycleStatus(dateStr, entry.id)}
+              onReorder={(fromIndex, toIndex) => reorderEntries(dateStr, fromIndex, toIndex)}
             />
           ))}
-        </div>
-
-        <div className="mt-4 border-t border-dashed border-border pt-4">
-          <EntryInput onSubmit={handleAddEntry} />
         </div>
       </div>
 
       {/* Legend */}
-      <div className="pt-4 border-t border-border flex flex-wrap gap-4 text-xs text-muted-foreground">
+      <div className="py-2 border-t border-border flex flex-wrap gap-3 md:gap-4 text-xs text-muted-foreground">
         <span>• Task</span>
         <span>○ Event</span>
         <span>— Note</span>

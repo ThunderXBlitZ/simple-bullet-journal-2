@@ -18,9 +18,13 @@ import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
 import { cn } from "@/lib/utils"
 
-export function MonthlyView() {
+interface MonthlyViewProps {
+  onDateClick?: (date: Date) => void
+}
+
+export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
-  const { getDailyLog, habits, habitCompletions } = useJournalStore()
+  const { getDailyLog, habits, habitCompletions, tags } = useJournalStore()
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
@@ -74,11 +78,16 @@ export function MonthlyView() {
             const completedCount = log.entries.filter((e) => e.type === "task" && e.status === "complete").length
             const habitsCompleted = habitCompletions.filter((c) => c.date === dateStr && c.completed).length
 
+            // Get first note entry
+            const firstNote = log.entries.find((e) => e.type === "note")
+            const firstNoteTag = firstNote?.tagIds?.[0] ? tags.find((t) => t.id === firstNote.tagIds?.[0]) : null
+
             return (
               <div
                 key={dateStr}
+                onClick={() => onDateClick?.(day)}
                 className={cn(
-                  "aspect-square p-1.5 border border-transparent rounded-lg transition-colors",
+                  "aspect-square p-1.5 border border-transparent rounded-lg transition-colors cursor-pointer",
                   "flex flex-col",
                   !inMonth && "opacity-30",
                   dayIsToday && "border-primary bg-accent/30",
@@ -89,11 +98,22 @@ export function MonthlyView() {
                   {format(day, "d")}
                 </span>
 
+                {/* Note preview with tag color */}
+                {firstNote && (
+                  <div className="flex-1 flex items-start justify-between gap-0.5 min-h-0">
+                    <span className="text-xs text-muted-foreground truncate flex-1">{firstNote.content}</span>
+                    {firstNoteTag && (
+                      <div
+                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: firstNoteTag.color }}
+                        title={firstNoteTag.name}
+                      />
+                    )}
+                  </div>
+                )}
+
                 {/* Indicators */}
                 <div className="flex-1 flex flex-col justify-end gap-0.5">
-                  {/* Mood indicator */}
-                  {log.mood && <div className={cn("w-full h-1 rounded-full", `bg-mood-${log.mood}`)} />}
-
                   {/* Task progress */}
                   {taskCount > 0 && (
                     <div className="flex gap-0.5">
@@ -125,7 +145,10 @@ export function MonthlyView() {
 
         {/* Legend */}
         <div className="mt-6 flex flex-wrap gap-4 text-xs text-muted-foreground border-t border-border pt-4">
-          <div className="flex items-center gap-2">
+          <span>• Task</span>
+          <span>○ Event</span>
+          <span>— Note</span>
+          <div className="flex items-center gap-2 ml-auto">
             <div className="flex gap-0.5">
               <div className="w-2 h-2 rounded-full bg-bullet-complete" />
               <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
@@ -135,10 +158,6 @@ export function MonthlyView() {
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-habit-complete" />
             <span>Habits</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-1 rounded-full bg-mood-3" />
-            <span>Mood</span>
           </div>
         </div>
       </div>

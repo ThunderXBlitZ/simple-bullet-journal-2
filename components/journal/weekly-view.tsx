@@ -6,13 +6,16 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
 import { EntryItem } from "./entry-item"
-import { EntryInput } from "./entry-input"
 import { cn } from "@/lib/utils"
 
-export function WeeklyView() {
+interface WeeklyViewProps {
+  onDateClick?: (date: Date) => void
+}
+
+export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
 
-  const { getDailyLog, addEntry, updateEntry, deleteEntry, cycleStatus } = useJournalStore()
+  const { getDailyLog, updateEntry, deleteEntry, cycleStatus } = useJournalStore()
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
@@ -39,17 +42,18 @@ export function WeeklyView() {
 
       {/* Week Grid */}
       <div className="flex-1 overflow-y-auto py-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 pb-6">
           {days.map((day) => {
             const dateStr = format(day, "yyyy-MM-dd")
             const log = getDailyLog(dateStr)
             const dayIsToday = isToday(day)
 
             return (
-              <div
+              <button
                 key={dateStr}
+                onClick={() => onDateClick?.(day)}
                 className={cn(
-                  "border border-border rounded-lg p-3 min-h-[200px] flex flex-col",
+                  "border border-border rounded-lg p-3 min-h-[200px] flex flex-col text-left transition-colors hover:bg-accent/10",
                   dayIsToday && "border-primary/50 bg-accent/30",
                 )}
               >
@@ -61,7 +65,6 @@ export function WeeklyView() {
                 >
                   <span className="block text-muted-foreground text-xs">{format(day, "EEEE")}</span>
                   {format(day, "MMM d")}
-                  {log.mood && <span className={cn("ml-2 inline-block w-2 h-2 rounded-full", `bg-mood-${log.mood}`)} />}
                 </div>
 
                 <div className="flex-1 space-y-0.5 text-sm overflow-y-auto">
@@ -69,26 +72,27 @@ export function WeeklyView() {
                     <EntryItem
                       key={entry.id}
                       entry={entry}
+                      date={dateStr}
                       onUpdate={(updates) => updateEntry(dateStr, entry.id, updates)}
                       onDelete={() => deleteEntry(dateStr, entry.id)}
                       onCycleStatus={() => cycleStatus(dateStr, entry.id)}
+                      readonly={true}
                     />
                   ))}
                   {log.entries.length > 5 && (
                     <span className="text-xs text-muted-foreground">+{log.entries.length - 5} more</span>
                   )}
                 </div>
-
-                <div className="mt-2 pt-2 border-t border-dashed border-border">
-                  <EntryInput
-                    onSubmit={(type, content, indent) => addEntry(dateStr, type, content, indent)}
-                    placeholder="Add..."
-                    autoFocus={false}
-                  />
-                </div>
-              </div>
+              </button>
             )
           })}
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground border-t border-border pt-4">
+          <span>• Task</span>
+          <span>○ Event</span>
+          <span>— Note</span>
         </div>
       </div>
     </div>

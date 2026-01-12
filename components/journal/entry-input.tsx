@@ -3,10 +3,12 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from "react"
 import type { BulletType } from "@/lib/types"
 import { BulletIcon } from "./bullet-icon"
+import { TagSelector } from "./tag-selector"
 import { cn } from "@/lib/utils"
+import { Check } from "lucide-react"
 
 interface EntryInputProps {
-  onSubmit: (type: BulletType, content: string, indent: number) => void
+  onSubmit: (type: BulletType, content: string, indent: number, tagIds?: string[], title?: string) => void
   initialType?: BulletType
   initialContent?: string
   initialIndent?: number
@@ -22,18 +24,21 @@ export function EntryInput({
   initialContent = "",
   initialIndent = 0,
   autoFocus = true,
-  placeholder = "Add an entry...",
+  placeholder,
   className,
   onCancel,
 }: EntryInputProps) {
   const [type, setType] = useState<BulletType>(initialType)
+  const [title, setTitle] = useState("")
   const [content, setContent] = useState(initialContent)
   const [indent, setIndent] = useState(initialIndent)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+  const titleRef = useRef<HTMLInputElement>(null)
+  const descriptionRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (autoFocus && inputRef.current) {
-      inputRef.current.focus()
+    if (autoFocus && titleRef.current) {
+      titleRef.current.focus()
     }
   }, [autoFocus])
 
@@ -43,14 +48,10 @@ export function EntryInput({
     setType(types[(currentIndex + 1) % types.length])
   }
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && content.trim()) {
-      onSubmit(type, content.trim(), indent)
-      setContent("")
-      setIndent(0)
-    } else if (e.key === "Escape") {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (e.key === "Escape") {
       onCancel?.()
-    } else if (e.key === "Tab") {
+    } else if (e.key === "Tab" && e.currentTarget instanceof HTMLTextAreaElement) {
       e.preventDefault()
       if (e.shiftKey) {
         setIndent(Math.max(0, indent - 1))
@@ -60,21 +61,70 @@ export function EntryInput({
     }
   }
 
+  const handleSubmit = () => {
+    if (title.trim() && content.trim()) {
+      onSubmit(type, content.trim(), indent, selectedTagIds, title.trim())
+      setTitle("")
+      setContent("")
+      setIndent(0)
+      setSelectedTagIds([])
+      titleRef.current?.focus()
+    }
+  }
+
   return (
-    <div className={cn("flex items-center gap-2 py-1.5 group", className)} style={{ paddingLeft: `${indent * 24}px` }}>
-      <BulletIcon type={type} status="open" onClick={cycleType} />
-      <input
-        ref={inputRef}
-        type="text"
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 font-serif text-base"
-      />
-      <span className="text-xs text-muted-foreground opacity-0 group-focus-within:opacity-100 transition-opacity">
-        Tab to indent
-      </span>
+    <div className={cn("flex flex-col gap-2 py-1.5 group", className)} style={{ paddingLeft: `${indent * 24}px` }}>
+      <div className="flex items-start gap-2">
+        <BulletIcon type={type} status="open" onClick={cycleType} />
+        <div className="flex-1 flex flex-col gap-2">
+          {/* Title Input */}
+          <input
+            ref={titleRef}
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="What are you grateful for today?"
+            className="bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 font-serif text-base font-semibold"
+          />
+
+          {/* Description Textarea */}
+          {title.trim() && (
+            <textarea
+              ref={descriptionRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Description"
+              rows={3}
+              className="bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 font-serif text-base resize-none"
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      {title.trim() && content.trim() && (
+        <>
+          <div className="flex items-center gap-2 ml-6">
+            <span className="text-xs text-muted-foreground">
+              Tab to indent
+            </span>
+            <button
+              onClick={handleSubmit}
+              className="ml-auto text-xs bg-primary text-primary-foreground px-2 py-1 rounded hover:bg-primary/90 transition-colors flex items-center gap-1"
+            >
+              <Check className="w-3 h-3" />
+              Save
+            </button>
+          </div>
+
+          {/* Tag Selector */}
+          <div className="ml-6 flex items-center gap-2">
+            <TagSelector selectedTagIds={selectedTagIds} onTagsChange={setSelectedTagIds} />
+          </div>
+        </>
+      )}
     </div>
   )
 }

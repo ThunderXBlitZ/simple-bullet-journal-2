@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { X } from "lucide-react"
 import { Sidebar } from "@/components/journal/sidebar"
 import { MobileNav } from "@/components/journal/mobile-nav"
 import { DailyLog } from "@/components/journal/daily-log"
@@ -17,7 +18,18 @@ type View = "daily" | "weekly" | "monthly" | "habits" | "collections"
 export default function Home() {
   const [currentView, setCurrentView] = useState<View>("daily")
   const [commandOpen, setCommandOpen] = useState(false)
-  const { settings } = useJournalStore()
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const { settings, toggleSetting } = useJournalStore()
+
+  // Apply zoom to root font size for proper scaling
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${settings.zoomLevel * 100}%`
+  }, [settings.zoomLevel])
+
+  const handleDateClick = (date: Date) => {
+    setSelectedDate(date)
+    setCurrentView("daily")
+  }
 
   // Command palette keyboard shortcut
   useEffect(() => {
@@ -35,25 +47,25 @@ export default function Home() {
   const renderView = () => {
     switch (currentView) {
       case "daily":
-        return <DailyLog />
+        return <DailyLog initialDate={selectedDate} />
       case "weekly":
-        return <WeeklyView />
+        return <WeeklyView onDateClick={handleDateClick} />
       case "monthly":
-        return <MonthlyView />
+        return <MonthlyView onDateClick={handleDateClick} />
       case "habits":
         return <HabitTracker />
       case "collections":
         return <CollectionsView />
       default:
-        return <DailyLog />
+        return <DailyLog initialDate={selectedDate} />
     }
   }
 
   return (
-    <div className={cn("flex h-screen bg-background overflow-hidden", settings.showDots && "dotted-bg")}>
+    <div className={cn("flex flex-col md:flex-row h-screen bg-background overflow-hidden", settings.showDots && "dotted-bg")}>
       {/* Desktop Sidebar */}
       {!settings.focusMode && (
-        <div className="hidden md:block">
+        <div className="hidden md:flex md:flex-col">
           <Sidebar currentView={currentView} onViewChange={setCurrentView} onOpenCommand={() => setCommandOpen(true)} />
         </div>
       )}
@@ -61,12 +73,16 @@ export default function Home() {
       {/* Main Content */}
       <main
         className={cn(
-          "flex-1 overflow-hidden",
+          "flex-1 overflow-hidden flex flex-col",
           "p-4 md:p-8",
-          "pb-20 md:pb-8", // Extra padding for mobile nav
+          "pb-16 md:pb-8", // Extra padding for mobile nav
         )}
       >
-        <div className="h-full max-w-4xl mx-auto">{renderView()}</div>
+        {/* Mobile Title */}
+        <div className="md:hidden text-right mb-4">
+          <h1 className="font-serif text-lg font-semibold text-foreground">My Bullet Journal</h1>
+        </div>
+        <div className="flex-1 overflow-y-auto max-w-4xl mx-auto w-full">{renderView()}</div>
       </main>
 
       {/* Mobile Navigation */}
@@ -83,6 +99,18 @@ export default function Home() {
           setCommandOpen(false)
         }}
       />
+
+      {/* Focus Mode Exit Button */}
+      {settings.focusMode && (
+        <button
+          onClick={() => toggleSetting("focusMode")}
+          className="fixed bottom-6 right-6 z-40 bg-primary text-primary-foreground p-3 rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+          title="Exit Focus Mode (Cmd+K)"
+          aria-label="Exit Focus Mode"
+        >
+          <X className="w-6 h-6" />
+        </button>
+      )}
     </div>
   )
 }

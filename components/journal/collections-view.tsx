@@ -24,6 +24,7 @@ export function CollectionsView() {
   const [selectedIcon, setSelectedIcon] = useState(defaultIcons[0])
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null)
   const [newItemContent, setNewItemContent] = useState("")
+  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null)
 
   const {
     collections,
@@ -32,6 +33,7 @@ export function CollectionsView() {
     addCollectionItem,
     toggleCollectionItem,
     deleteCollectionItem,
+    reorderCollectionItems,
   } = useJournalStore()
 
   const handleAddCollection = (name?: string, icon?: string) => {
@@ -51,6 +53,39 @@ export function CollectionsView() {
     }
   }
 
+  const handleItemDragStart = (e: React.DragEvent, itemId: string) => {
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("text/plain", itemId)
+  }
+
+  const handleItemDragOver = (e: React.DragEvent, itemId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+    setDragOverItemId(itemId)
+  }
+
+  const handleItemDragLeave = () => {
+    setDragOverItemId(null)
+  }
+
+  const handleItemDrop = (e: React.DragEvent, toItemId: string, collectionId: string) => {
+    e.preventDefault()
+    setDragOverItemId(null)
+    const fromItemId = e.dataTransfer.getData("text/plain")
+    const collection = collections.find((c) => c.id === collectionId)
+    if (collection) {
+      const fromIndex = collection.items.findIndex((i) => i.id === fromItemId)
+      const toIndex = collection.items.findIndex((i) => i.id === toItemId)
+      if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+        reorderCollectionItems(collectionId, fromIndex, toIndex)
+      }
+    }
+  }
+
+  const handleItemDragEnd = () => {
+    setDragOverItemId(null)
+  }
+
   const activeCollection = collections.find((c) => c.id === selectedCollection)
 
   return (
@@ -58,74 +93,78 @@ export function CollectionsView() {
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-border">
         <h2 className="font-serif text-lg">Collections</h2>
-        <Button variant="outline" size="sm" onClick={() => setIsAdding(true)}>
-          <Plus className="w-4 h-4 mr-1" />
-          New Collection
-        </Button>
       </div>
 
-      {/* Add Collection Form */}
-      {isAdding && (
-        <div className="py-4 border-b border-border space-y-3">
-          <div className="flex gap-2">
-            <Input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="Collection name..."
-              className="font-serif"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleAddCollection()
-                if (e.key === "Escape") setIsAdding(false)
-              }}
-            />
-          </div>
+      {/* Add Collection Input */}
+      <div className="px-0 py-2 border-b border-dashed border-border space-y-3">
+        <Input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Collection name..."
+          className="font-serif"
+          autoFocus={isAdding}
+          onFocus={() => setIsAdding(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleAddCollection()
+            if (e.key === "Escape") {
+              setNewName("")
+              setIsAdding(false)
+            }
+          }}
+        />
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Icon:</span>
-            <div className="flex gap-1 flex-wrap">
-              {defaultIcons.map((icon) => (
-                <button
-                  key={icon}
-                  onClick={() => setSelectedIcon(icon)}
-                  className={cn(
-                    "w-8 h-8 rounded flex items-center justify-center transition-colors",
-                    selectedIcon === icon ? "bg-accent" : "hover:bg-accent/50",
-                  )}
-                >
-                  {icon}
-                </button>
-              ))}
+        {newName.trim() && (
+          <>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-muted-foreground">Icon:</span>
+              <div className="flex gap-1 flex-wrap">
+                {defaultIcons.map((icon) => (
+                  <button
+                    key={icon}
+                    onClick={() => setSelectedIcon(icon)}
+                    className={cn(
+                      "w-8 h-8 rounded flex items-center justify-center transition-colors",
+                      selectedIcon === icon ? "bg-accent" : "hover:bg-accent/50",
+                    )}
+                  >
+                    {icon}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => handleAddCollection()}>
-              Create
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setIsAdding(false)}>
-              Cancel
-            </Button>
-          </div>
-
-          <div className="pt-2 border-t border-dashed border-border">
-            <span className="text-sm text-muted-foreground mb-2 block">Quick templates:</span>
-            <div className="flex flex-wrap gap-2">
-              {templateOptions.map((template) => (
-                <Button
-                  key={template.name}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleAddCollection(template.name, template.icon)}
-                  className="text-xs"
-                >
-                  {template.icon} {template.name}
-                </Button>
-              ))}
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => handleAddCollection()}>
+                <Plus className="w-3 h-3 mr-1" />
+                Create
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => {
+                setNewName("")
+                setIsAdding(false)
+              }}>
+                Cancel
+              </Button>
             </div>
-          </div>
-        </div>
-      )}
+
+            <div className="pt-2 border-t border-dashed border-border">
+              <span className="text-sm text-muted-foreground mb-2 block">Quick templates:</span>
+              <div className="flex flex-wrap gap-2">
+                {templateOptions.map((template) => (
+                  <Button
+                    key={template.name}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddCollection(template.name, template.icon)}
+                    className="text-xs"
+                  >
+                    {template.icon} {template.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Collections Grid / Detail View */}
       <div className="flex-1 overflow-y-auto py-4">
@@ -154,7 +193,21 @@ export function CollectionsView() {
 
             <div className="space-y-1 mb-4">
               {activeCollection.items.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 py-2 px-2 -mx-2 rounded hover:bg-accent/30 group">
+                <div
+                  key={item.id}
+                  draggable
+                  onDragStart={(e) => handleItemDragStart(e, item.id)}
+                  onDragOver={(e) => handleItemDragOver(e, item.id)}
+                  onDragLeave={handleItemDragLeave}
+                  onDrop={(e) => handleItemDrop(e, item.id, activeCollection.id)}
+                  onDragEnd={handleItemDragEnd}
+                  className={cn(
+                    "flex items-center gap-3 py-2 px-2 rounded transition-colors cursor-grab active:cursor-grabbing",
+                    dragOverItemId === item.id && "bg-accent/50 border-l-2 border-primary",
+                    !dragOverItemId && "hover:bg-accent/30",
+                    "group"
+                  )}
+                >
                   <button
                     onClick={() => toggleCollectionItem(activeCollection.id, item.id)}
                     className={cn(

@@ -7,19 +7,24 @@ export interface BulletEntry {
   id: string
   type: BulletType
   status: BulletStatus
+  title?: string
   content: string
   indent: number
+  tagIds?: string[] // Tags applied to this entry
   createdAt: string
   updatedAt: string
+}
+
+export interface Tag {
+  id: string
+  name: string
+  color: string
+  createdAt: string
 }
 
 export interface DailyLog {
   date: string // YYYY-MM-DD
   entries: BulletEntry[]
-  mood?: number // 1-5
-  gratitude?: string
-  morningNote?: string
-  eveningNote?: string
 }
 
 export interface Habit {
@@ -53,6 +58,7 @@ export interface CollectionItem {
 
 export interface JournalState {
   dailyLogs: Record<string, DailyLog>
+  tags: Tag[]
   habits: Habit[]
   habitCompletions: HabitCompletion[]
   collections: Collection[]
@@ -60,5 +66,6 @@ export interface JournalState {
     showDots: boolean
     showLines: boolean
     focusMode: boolean
+    zoomLevel: number // 0.8, 0.9, 1, 1.1, 1.2, etc.
   }
 }

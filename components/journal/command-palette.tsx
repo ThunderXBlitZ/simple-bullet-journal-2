@@ -11,7 +11,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command"
-import { CalendarDays, CalendarRange, CheckSquare, List, Search, Moon, Sun, Maximize2, Minimize2 } from "lucide-react"
+import { CalendarDays, CalendarRange, CheckSquare, List, Search, Moon, Sun, Maximize2, Minimize2, Plus, Minus } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useJournalStore } from "@/lib/journal-store"
 
@@ -23,7 +23,7 @@ interface CommandPaletteProps {
 
 export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPaletteProps) {
   const { theme, setTheme } = useTheme()
-  const { dailyLogs, habits, collections, settings, toggleSetting } = useJournalStore()
+  const { dailyLogs, habits, collections, settings, toggleSetting, setZoom } = useJournalStore()
   const [search, setSearch] = useState("")
 
   // Search results from entries
@@ -43,14 +43,6 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPalett
           })
         }
       })
-
-      if (log.gratitude?.toLowerCase().includes(query)) {
-        results.push({
-          date,
-          content: log.gratitude,
-          type: "gratitude",
-        })
-      }
     })
 
     return results.slice(0, 10)
@@ -173,6 +165,25 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPalett
           >
             {settings.focusMode ? <Minimize2 className="mr-2 h-4 w-4" /> : <Maximize2 className="mr-2 h-4 w-4" />}
             Toggle Focus Mode
+          </CommandItem>
+
+          <CommandSeparator />
+
+          <CommandItem
+            onSelect={() => {
+              setZoom(settings.zoomLevel - 0.1)
+            }}
+          >
+            <Minus className="mr-2 h-4 w-4" />
+            Zoom Out ({Math.round(settings.zoomLevel * 100)}%)
+          </CommandItem>
+          <CommandItem
+            onSelect={() => {
+              setZoom(settings.zoomLevel + 0.1)
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Zoom In ({Math.round(settings.zoomLevel * 100)}%)
           </CommandItem>
         </CommandGroup>
       </CommandList>

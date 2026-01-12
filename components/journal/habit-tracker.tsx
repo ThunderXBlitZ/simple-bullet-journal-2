@@ -17,8 +17,9 @@ export function HabitTracker() {
   const [newHabitName, setNewHabitName] = useState("")
   const [selectedIcon, setSelectedIcon] = useState(defaultIcons[0])
   const [selectedColor, setSelectedColor] = useState(defaultColors[0])
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
-  const { habits, habitCompletions, addHabit, deleteHabit, toggleHabitCompletion, getHabitStreak } = useJournalStore()
+  const { habits, habitCompletions, addHabit, deleteHabit, toggleHabitCompletion, getHabitStreak, reorderHabits } = useJournalStore()
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
@@ -34,6 +35,34 @@ export function HabitTracker() {
       setNewHabitName("")
       setIsAdding(false)
     }
+  }
+
+  const handleHabitDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("text/plain", index.toString())
+  }
+
+  const handleHabitDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+    setDragOverIndex(index)
+  }
+
+  const handleHabitDragLeave = () => {
+    setDragOverIndex(null)
+  }
+
+  const handleHabitDrop = (e: React.DragEvent, toIndex: number) => {
+    e.preventDefault()
+    setDragOverIndex(null)
+    const fromIndex = parseInt(e.dataTransfer.getData("text/plain"), 10)
+    if (fromIndex !== toIndex) {
+      reorderHabits(fromIndex, toIndex)
+    }
+  }
+
+  const handleHabitDragEnd = () => {
+    setDragOverIndex(null)
   }
 
   const isHabitComplete = (habitId: string, date: string) => {
@@ -60,30 +89,29 @@ export function HabitTracker() {
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
-
-        <Button variant="outline" size="sm" onClick={() => setIsAdding(true)}>
-          <Plus className="w-4 h-4 mr-1" />
-          Add Habit
-        </Button>
       </div>
 
-      {/* Add Habit Form */}
-      {isAdding && (
-        <div className="py-4 border-b border-border space-y-3">
-          <Input
-            value={newHabitName}
-            onChange={(e) => setNewHabitName(e.target.value)}
-            placeholder="Habit name..."
-            className="font-serif"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleAddHabit()
-              if (e.key === "Escape") setIsAdding(false)
-            }}
-          />
+      {/* Add Habit Input */}
+      <div className="px-0 py-2 border-b border-dashed border-border space-y-3">
+        <Input
+          value={newHabitName}
+          onChange={(e) => setNewHabitName(e.target.value)}
+          placeholder="Habit name..."
+          className="font-serif"
+          autoFocus={isAdding}
+          onFocus={() => setIsAdding(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleAddHabit()
+            if (e.key === "Escape") {
+              setNewHabitName("")
+              setIsAdding(false)
+            }
+          }}
+        />
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
+        {newHabitName.trim() && (
+          <>
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm text-muted-foreground">Icon:</span>
               <div className="flex gap-1">
                 {defaultIcons.map((icon) => (
@@ -101,7 +129,7 @@ export function HabitTracker() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm text-muted-foreground">Color:</span>
               <div className="flex gap-1">
                 {defaultColors.map((color) => (
@@ -118,18 +146,22 @@ export function HabitTracker() {
                 ))}
               </div>
             </div>
-          </div>
 
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleAddHabit}>
-              Add
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setIsAdding(false)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleAddHabit}>
+                <Plus className="w-3 h-3 mr-1" />
+                Add Habit
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => {
+                setNewHabitName("")
+                setIsAdding(false)
+              }}>
+                Cancel
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Habit Grid */}
       <div className="flex-1 overflow-x-auto py-4">
@@ -161,12 +193,24 @@ export function HabitTracker() {
             </div>
 
             {/* Habits */}
-            {habits.map((habit) => {
+            {habits.map((habit, index) => {
               const streak = getHabitStreak(habit.id)
               const rate = getCompletionRate(habit.id)
 
               return (
-                <div key={habit.id} className="flex items-center gap-1 mb-1 group">
+                <div
+                  key={habit.id}
+                  draggable
+                  onDragStart={(e) => handleHabitDragStart(e, index)}
+                  onDragOver={(e) => handleHabitDragOver(e, index)}
+                  onDragLeave={handleHabitDragLeave}
+                  onDrop={(e) => handleHabitDrop(e, index)}
+                  onDragEnd={handleHabitDragEnd}
+                  className={cn(
+                    "flex items-center gap-1 mb-1 group transition-colors cursor-grab active:cursor-grabbing",
+                    dragOverIndex === index && "bg-accent/50 border-l-2 border-primary"
+                  )}
+                >
                   <div className="w-40 flex items-center gap-2 pr-2 truncate">
                     <span>{habit.icon}</span>
                     <span className="font-serif text-sm truncate">{habit.name}</span>

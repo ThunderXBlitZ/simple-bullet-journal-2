@@ -11,23 +11,38 @@ import type {
   CollectionItem,
   BulletType,
   BulletStatus,
+  Tag,
 } from "./types"
+import { getStorageProvider } from "./storage/storage"
+import { createZustandStorage } from "./storage/zustand-adapter"
+import { tagPresets } from "./tag-presets"
 
 const generateId = () => Math.random().toString(36).substring(2, 15)
 
 const getToday = () => new Date().toISOString().split("T")[0]
 
+const initializePresetTags = (): Tag[] => {
+  return tagPresets.map((preset) => ({
+    ...preset,
+    id: generateId(),
+    createdAt: new Date().toISOString(),
+  }))
+}
+
 interface JournalStore extends JournalState {
   // Daily Log Actions
   getDailyLog: (date: string) => DailyLog
-  addEntry: (date: string, type: BulletType, content: string, indent?: number) => void
+  addEntry: (date: string, type: BulletType, content: string, indent?: number, tagIds?: string[], title?: string) => void
   updateEntry: (date: string, entryId: string, updates: Partial<BulletEntry>) => void
   deleteEntry: (date: string, entryId: string) => void
   cycleStatus: (date: string, entryId: string) => void
-  setMood: (date: string, mood: number) => void
-  setGratitude: (date: string, gratitude: string) => void
-  setMorningNote: (date: string, note: string) => void
-  setEveningNote: (date: string, note: string) => void
+
+  // Tag Actions
+  addTag: (name: string, color: string) => void
+  deleteTag: (tagId: string) => void
+  addTagToEntry: (date: string, entryId: string, tagId: string) => void
+  removeTagFromEntry: (date: string, entryId: string, tagId: string) => void
+  getTagById: (tagId: string) => Tag | undefined
 
   // Habit Actions
   addHabit: (name: string, icon: string, color: string) => void
@@ -41,12 +56,18 @@ interface JournalStore extends JournalState {
   addCollectionItem: (collectionId: string, content: string) => void
   toggleCollectionItem: (collectionId: string, itemId: string) => void
   deleteCollectionItem: (collectionId: string, itemId: string) => void
+  reorderCollectionItems: (collectionId: string, fromIndex: number, toIndex: number) => void
 
   // Migration
   migrateIncompleteTasks: (fromDate: string, toDate: string) => void
 
+  // Reordering
+  reorderEntries: (date: string, fromIndex: number, toIndex: number) => void
+  reorderHabits: (fromIndex: number, toIndex: number) => void
+
   // Settings
   toggleSetting: (setting: keyof JournalState["settings"]) => void
+  setZoom: (zoomLevel: number) => void
 }
 
 const statusCycle: BulletStatus[] = ["open", "complete", "migrated", "scheduled", "irrelevant"]
@@ -55,6 +76,7 @@ export const useJournalStore = create<JournalStore>()(
   persist(
     (set, get) => ({
       dailyLogs: {},
+      tags: initializePresetTags(),
       habits: [],
       habitCompletions: [],
       collections: [],
@@ -62,6 +84,7 @@ export const useJournalStore = create<JournalStore>()(
         showDots: true,
         showLines: false,
         focusMode: false,
+        zoomLevel: 1,
       },
 
       getDailyLog: (date: string) => {
@@ -69,14 +92,16 @@ export const useJournalStore = create<JournalStore>()(
         return dailyLogs[date] || { date, entries: [] }
       },
 
-      addEntry: (date, type, content, indent = 0) => {
+      addEntry: (date, type, content, indent = 0, tagIds = [], title) => {
         const now = new Date().toISOString()
         const newEntry: BulletEntry = {
           id: generateId(),
           type,
           status: type === "task" ? "open" : "complete",
+          title,
           content,
           indent,
+          tagIds: tagIds.length > 0 ? tagIds : undefined,
           createdAt: now,
           updatedAt: now,
         }
@@ -153,52 +178,81 @@ export const useJournalStore = create<JournalStore>()(
         })
       },
 
-      setMood: (date, mood) => {
+      addTag: (name, color) => {
+        const newTag: Tag = {
+          id: generateId(),
+          name,
+          color,
+          createdAt: new Date().toISOString(),
+        }
+        set((state) => ({
+          tags: [...state.tags, newTag],
+        }))
+      },
+
+      deleteTag: (tagId) => {
+        set((state) => ({
+          tags: state.tags.filter((t) => t.id !== tagId),
+          dailyLogs: Object.fromEntries(
+            Object.entries(state.dailyLogs).map(([date, log]) => [
+              date,
+              {
+                ...log,
+                entries: log.entries.map((e) => ({
+                  ...e,
+                  tagIds: e.tagIds?.filter((id) => id !== tagId),
+                })),
+              },
+            ])
+          ),
+        }))
+      },
+
+      addTagToEntry: (date, entryId, tagId) => {
         set((state) => {
-          const existingLog = state.dailyLogs[date] || { date, entries: [] }
+          const log = state.dailyLogs[date]
+          if (!log) return state
+
           return {
             dailyLogs: {
               ...state.dailyLogs,
-              [date]: { ...existingLog, mood },
+              [date]: {
+                ...log,
+                entries: log.entries.map((e) =>
+                  e.id === entryId
+                    ? { ...e, tagIds: [...(e.tagIds || []), tagId] }
+                    : e
+                ),
+              },
             },
           }
         })
       },
 
-      setGratitude: (date, gratitude) => {
+      removeTagFromEntry: (date, entryId, tagId) => {
         set((state) => {
-          const existingLog = state.dailyLogs[date] || { date, entries: [] }
+          const log = state.dailyLogs[date]
+          if (!log) return state
+
           return {
             dailyLogs: {
               ...state.dailyLogs,
-              [date]: { ...existingLog, gratitude },
+              [date]: {
+                ...log,
+                entries: log.entries.map((e) =>
+                  e.id === entryId
+                    ? { ...e, tagIds: e.tagIds?.filter((id) => id !== tagId) }
+                    : e
+                ),
+              },
             },
           }
         })
       },
 
-      setMorningNote: (date, note) => {
-        set((state) => {
-          const existingLog = state.dailyLogs[date] || { date, entries: [] }
-          return {
-            dailyLogs: {
-              ...state.dailyLogs,
-              [date]: { ...existingLog, morningNote: note },
-            },
-          }
-        })
-      },
-
-      setEveningNote: (date, note) => {
-        set((state) => {
-          const existingLog = state.dailyLogs[date] || { date, entries: [] }
-          return {
-            dailyLogs: {
-              ...state.dailyLogs,
-              [date]: { ...existingLog, eveningNote: note },
-            },
-          }
-        })
+      getTagById: (tagId) => {
+        const { tags } = get()
+        return tags.find((t) => t.id === tagId)
       },
 
       addHabit: (name, icon, color) => {
@@ -355,6 +409,51 @@ export const useJournalStore = create<JournalStore>()(
         })
       },
 
+      reorderEntries: (date, fromIndex, toIndex) => {
+        set((state) => {
+          const log = state.dailyLogs[date]
+          if (!log || fromIndex === toIndex) return state
+
+          const entries = [...log.entries]
+          const [movedEntry] = entries.splice(fromIndex, 1)
+          entries.splice(toIndex, 0, movedEntry)
+
+          return {
+            dailyLogs: {
+              ...state.dailyLogs,
+              [date]: { ...log, entries },
+            },
+          }
+        })
+      },
+
+      reorderHabits: (fromIndex, toIndex) => {
+        set((state) => {
+          if (fromIndex === toIndex) return state
+
+          const habits = [...state.habits]
+          const [movedHabit] = habits.splice(fromIndex, 1)
+          habits.splice(toIndex, 0, movedHabit)
+
+          return { habits }
+        })
+      },
+
+      reorderCollectionItems: (collectionId, fromIndex, toIndex) => {
+        set((state) => {
+          const collection = state.collections.find((c) => c.id === collectionId)
+          if (!collection || fromIndex === toIndex) return state
+
+          const items = [...collection.items]
+          const [movedItem] = items.splice(fromIndex, 1)
+          items.splice(toIndex, 0, movedItem)
+
+          return {
+            collections: state.collections.map((c) => (c.id === collectionId ? { ...c, items } : c)),
+          }
+        })
+      },
+
       toggleSetting: (setting) => {
         set((state) => ({
           settings: {
@@ -363,9 +462,19 @@ export const useJournalStore = create<JournalStore>()(
           },
         }))
       },
+
+      setZoom: (zoomLevel) => {
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            zoomLevel: Math.max(0.8, Math.min(1.5, zoomLevel)),
+          },
+        }))
+      },
     }),
     {
       name: "bullet-journal-storage",
+      storage: createZustandStorage(getStorageProvider()),
     },
   ),
 )
