@@ -21,7 +21,7 @@ export function HabitTracker() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [quote, setQuote] = useState(() => getRandomQuote())
 
-  const { habits, habitCompletions, addHabit, deleteHabit, toggleHabitCompletion, getHabitStreak, reorderHabits } = useJournalStore()
+  const { habits, habitCompletions, addHabit, deleteHabit, toggleHabitCompletion, getHabitStreak, reorderHabits, userName } = useJournalStore()
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
@@ -90,7 +90,9 @@ export function HabitTracker() {
       {/* Header */}
       <div className="pb-2 border-b border-border">
         <div className="flex items-center justify-between gap-2">
-          <div className="md:hidden font-serif text-sm font-semibold text-foreground">My Bullet Journal</div>
+          <div className="md:hidden font-serif text-sm font-semibold text-foreground">
+            {userName}'s Bullet Journal
+          </div>
 
           <div className="flex items-center gap-1 md:gap-2 ml-auto">
             <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goPrevMonth}>
@@ -287,21 +289,15 @@ export function HabitTracker() {
               )
             })}
           </div>
-          {/* Inspiration Quote */}
+        )}
+
+        {/* Inspiration Quote */}
+        {habits.length > 0 && (
           <div className="py-2 border-t border-border text-center">
             <p className="text-sm font-serif text-muted-foreground italic">{quote}</p>
           </div>
         )}
       </div>
     </div>
-  )
-}
-
-function CheckSquareIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   )
 }

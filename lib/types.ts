@@ -62,6 +62,7 @@ export interface JournalState {
   habits: Habit[]
   habitCompletions: HabitCompletion[]
   collections: Collection[]
+  userName: string
   settings: {
     showDots: boolean
     showLines: boolean

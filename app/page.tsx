@@ -10,6 +10,8 @@ import { MonthlyView } from "@/components/journal/monthly-view"
 import { HabitTracker } from "@/components/journal/habit-tracker"
 import { CollectionsView } from "@/components/journal/collections-view"
 import { CommandPalette } from "@/components/journal/command-palette"
+import { SetupModal } from "@/components/journal/setup-modal"
+import { SettingsModal } from "@/components/journal/settings-modal"
 import { useJournalStore } from "@/lib/journal-store"
 import { cn } from "@/lib/utils"
 
@@ -19,16 +21,30 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<View>("daily")
   const [commandOpen, setCommandOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
-  const { settings, toggleSetting } = useJournalStore()
+  const [showSetupModal, setShowSetupModal] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const { settings, toggleSetting, userName, setUserName } = useJournalStore()
 
   // Apply zoom to root font size for proper scaling
   useEffect(() => {
     document.documentElement.style.fontSize = `${settings.zoomLevel * 100}%`
   }, [settings.zoomLevel])
 
+  // Show setup modal on first visit
+  useEffect(() => {
+    if (!userName) {
+      setShowSetupModal(true)
+    }
+  }, [])
+
   const handleDateClick = (date: Date) => {
     setSelectedDate(date)
     setCurrentView("daily")
+  }
+
+  const handleSetupComplete = (name: string) => {
+    setUserName(name)
+    setShowSetupModal(false)
   }
 
   // Command palette keyboard shortcut
@@ -66,7 +82,12 @@ export default function Home() {
       {/* Desktop Sidebar */}
       {!settings.focusMode && (
         <div className="hidden md:flex md:flex-col">
-          <Sidebar currentView={currentView} onViewChange={setCurrentView} onOpenCommand={() => setCommandOpen(true)} />
+          <Sidebar
+            currentView={currentView}
+            onViewChange={setCurrentView}
+            onOpenCommand={() => setCommandOpen(true)}
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
         </div>
       )}
 
@@ -107,6 +128,12 @@ export default function Home() {
           <X className="w-6 h-6" />
         </button>
       )}
+
+      {/* Setup Modal */}
+      <SetupModal open={showSetupModal} onSubmit={handleSetupComplete} />
+
+      {/* Settings Modal */}
+      <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   )
 }

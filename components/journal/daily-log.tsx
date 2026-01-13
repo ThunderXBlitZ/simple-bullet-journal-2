@@ -30,6 +30,7 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
     migrateIncompleteTasks,
     settings,
     reorderEntries,
+    userName,
   } = useJournalStore()
 
   const dailyLog = getDailyLog(dateStr)
@@ -74,7 +75,9 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
       {/* Header */}
       <div className="pb-2 border-b border-border">
         <div className="flex items-center justify-between gap-2">
-          <div className="md:hidden font-serif text-sm font-semibold text-foreground">My Bullet Journal</div>
+          <div className="md:hidden font-serif text-sm font-semibold text-foreground">
+            {userName}'s Bullet Journal
+          </div>
 
           {showMigrate && (
             <Button variant="outline" size="sm" onClick={handleMigrate} className="text-xs bg-transparent flex-shrink-0">

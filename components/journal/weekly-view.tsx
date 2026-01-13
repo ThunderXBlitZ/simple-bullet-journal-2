@@ -17,7 +17,7 @@ export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [quote, setQuote] = useState(() => getRandomQuote())
 
-  const { getDailyLog, updateEntry, deleteEntry, cycleStatus } = useJournalStore()
+  const { getDailyLog, updateEntry, deleteEntry, cycleStatus, userName } = useJournalStore()
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
@@ -39,7 +39,9 @@ export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
       {/* Header */}
       <div className="pb-2 border-b border-border">
         <div className="flex items-center justify-between gap-2">
-          <div className="md:hidden font-serif text-sm font-semibold text-foreground">My Bullet Journal</div>
+          <div className="md:hidden font-serif text-sm font-semibold text-foreground">
+            {userName}'s Bullet Journal
+          </div>
 
           <div className="flex items-center gap-1 md:gap-2 ml-auto">
             <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goPrevWeek}>

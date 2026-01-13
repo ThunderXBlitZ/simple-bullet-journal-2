@@ -68,6 +68,7 @@ interface JournalStore extends JournalState {
   // Settings
   toggleSetting: (setting: keyof JournalState["settings"]) => void
   setZoom: (zoomLevel: number) => void
+  setUserName: (name: string) => void
 }
 
 const statusCycle: BulletStatus[] = ["open", "complete", "migrated", "scheduled", "irrelevant"]
@@ -80,6 +81,7 @@ export const useJournalStore = create<JournalStore>()(
       habits: [],
       habitCompletions: [],
       collections: [],
+      userName: "",
       settings: {
         showDots: true,
         showLines: false,
@@ -470,6 +472,10 @@ export const useJournalStore = create<JournalStore>()(
             zoomLevel: Math.max(0.8, Math.min(1.5, zoomLevel)),
           },
         }))
+      },
+
+      setUserName: (name) => {
+        set({ userName: name.trim() })
       },
     }),
     {

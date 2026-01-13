@@ -18,6 +18,7 @@ import {
   Minimize2,
   Plus,
   Minus,
+  Settings,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
@@ -30,6 +31,7 @@ interface SidebarProps {
   currentView: View
   onViewChange: (view: View) => void
   onOpenCommand: () => void
+  onOpenSettings: () => void
   className?: string
 }
 
@@ -41,7 +43,7 @@ const navItems: { id: View; label: string; icon: React.ReactNode }[] = [
   { id: "collections", label: "Collections", icon: <List className="w-4 h-4" /> },
 ]
 
-export function Sidebar({ currentView, onViewChange, onOpenCommand, className }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettings, className }: SidebarProps) {
   const { theme, setTheme } = useTheme()
   const { settings, toggleSetting, setZoom, collections } = useJournalStore()
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -63,7 +65,11 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, className }:
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-        {!isCollapsed && <h1 className="font-serif text-lg font-semibold text-sidebar-foreground">My Bullet Journal</h1>}
+        {!isCollapsed && (
+          <h1 className="font-serif text-lg font-semibold text-sidebar-foreground">
+            {useJournalStore().userName}'s Bullet Journal
+          </h1>
+        )}
         <Button
           variant="ghost"
           size="icon"
@@ -135,6 +141,15 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, className }:
         >
           {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           {!isCollapsed && <span className="font-serif">{theme === "dark" ? "Light" : "Dark"}</span>}
+        </Button>
+
+        <Button
+          variant="ghost"
+          className={cn("w-full justify-start gap-3 text-sidebar-foreground text-sm", isCollapsed && "justify-center")}
+          onClick={onOpenSettings}
+        >
+          <Settings className="w-4 h-4" />
+          {!isCollapsed && <span className="font-serif">Settings</span>}
         </Button>
 
         {/* Zoom Controls */}
