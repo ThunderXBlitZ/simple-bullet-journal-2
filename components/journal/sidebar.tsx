@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import {
   CalendarDays,
@@ -47,6 +47,11 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
   const { theme, setTheme } = useTheme()
   const { settings, toggleSetting, setZoom, collections } = useJournalStore()
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [currentMonth, setCurrentMonth] = useState("")
+
+  useEffect(() => {
+    setCurrentMonth(format(new Date(), "MMMM yyyy"))
+  }, [])
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark")
@@ -183,7 +188,7 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
       {/* Date */}
       {!isCollapsed && (
         <div className="p-4 text-center text-xs text-sidebar-foreground/60 font-serif">
-          {format(new Date(), "MMMM yyyy")}
+          {currentMonth}
         </div>
       )}
     </aside>

@@ -20,7 +20,6 @@ export function HabitTracker() {
   const [selectedColor, setSelectedColor] = useState(defaultColors[0])
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [quote, setQuote] = useState(() => getRandomQuote())
-
   const { habits, habitCompletions, addHabit, deleteHabit, toggleHabitCompletion, getHabitStreak, reorderHabits, userName } = useJournalStore()
 
   const monthStart = startOfMonth(currentMonth)

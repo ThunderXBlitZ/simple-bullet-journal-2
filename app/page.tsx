@@ -12,18 +12,80 @@ import { CollectionsView } from "@/components/journal/collections-view"
 import { CommandPalette } from "@/components/journal/command-palette"
 import { SetupModal } from "@/components/journal/setup-modal"
 import { SettingsModal } from "@/components/journal/settings-modal"
-import { useJournalStore } from "@/lib/journal-store"
+import { useJournalStore, GOOGLE_SYNC_ENABLED, GOOGLE_CONFIG } from "@/lib/journal-store"
+import { initializeGoogle, setAccessToken } from "@/lib/google/auth"
+import { debouncedSync, cancelSync } from "@/lib/google/auto-sync"
 import { cn } from "@/lib/utils"
 
 type View = "daily" | "weekly" | "monthly" | "habits" | "collections"
 
 export default function Home() {
+  const [mounted, setMounted] = useState(false)
   const [currentView, setCurrentView] = useState<View>("daily")
   const [commandOpen, setCommandOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [showSetupModal, setShowSetupModal] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const { settings, toggleSetting, userName, setUserName } = useJournalStore()
+  const { settings, toggleSetting, userName, setUserName, authMethod, accessToken, setGoogleUser, setAuthMethod } =
+    useJournalStore()
+
+  // Mark as mounted and rehydrate store — until this fires,
+  // both server and client render the same empty shell (no mismatch)
+  useEffect(() => {
+    useJournalStore.persist.rehydrate()
+    setMounted(true)
+  }, [])
+
+  // Initialize Google Sign-In on app load
+  useEffect(() => {
+    const initGoogle = async () => {
+      if (GOOGLE_SYNC_ENABLED && GOOGLE_CONFIG.clientId) {
+        try {
+          await initializeGoogle(GOOGLE_CONFIG)
+          // Restore access token if it exists
+          if (accessToken) {
+            setAccessToken(accessToken)
+          }
+        } catch (error) {
+          console.error("Failed to initialize Google:", error)
+        }
+      }
+    }
+
+    initGoogle()
+  }, [accessToken])
+
+  // Setup auto-sync subscription
+  useEffect(() => {
+    if (!GOOGLE_SYNC_ENABLED) {
+      return
+    }
+
+    // Subscribe to store changes and trigger debounced sync
+    const unsubscribe = useJournalStore.subscribe(
+      (state) => ({
+        dailyLogs: state.dailyLogs,
+        tags: state.tags,
+        habits: state.habits,
+        habitCompletions: state.habitCompletions,
+        collections: state.collections,
+        userName: state.userName,
+        settings: state.settings,
+        googleDriveSyncEnabled: state.googleDriveSyncEnabled,
+        authMethod: state.authMethod,
+      }),
+      (newState) => {
+        // Trigger debounced sync on any data change
+        debouncedSync()
+      }
+    )
+
+    // Cleanup on unmount
+    return () => {
+      unsubscribe()
+      cancelSync()
+    }
+  }, [])
 
   // Apply zoom to root font size for proper scaling
   useEffect(() => {
@@ -42,8 +104,17 @@ export default function Home() {
     setCurrentView("daily")
   }
 
-  const handleSetupComplete = (name: string) => {
+  const handleSetupComplete = (authMethod: "guest" | "google", name: string, googleData?: any) => {
     setUserName(name)
+
+    if (authMethod === "google" && googleData) {
+      // Store Google auth info
+      setGoogleUser(googleData.id, googleData.email, "", "")
+    } else {
+      // Guest mode - just set auth method
+      setAuthMethod("guest")
+    }
+
     setShowSetupModal(false)
   }
 
@@ -75,6 +146,13 @@ export default function Home() {
       default:
         return <DailyLog initialDate={selectedDate} />
     }
+  }
+
+  // Until client-side hydration completes, render an empty shell so
+  // server HTML and first client render are identical (no hydration mismatch).
+  // This app is fully client-side (localStorage/IndexedDB) so SSR content has no value.
+  if (!mounted) {
+    return <div className="flex flex-col md:flex-row h-screen bg-background overflow-hidden" />
   }
 
   return (
@@ -130,7 +208,7 @@ export default function Home() {
       )}
 
       {/* Setup Modal */}
-      <SetupModal open={showSetupModal} onSubmit={handleSetupComplete} />
+      <SetupModal open={showSetupModal} onComplete={handleSetupComplete} />
 
       {/* Settings Modal */}
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />

@@ -16,7 +16,6 @@ interface WeeklyViewProps {
 export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [quote, setQuote] = useState(() => getRandomQuote())
-
   const { getDailyLog, updateEntry, deleteEntry, cycleStatus, userName } = useJournalStore()
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))

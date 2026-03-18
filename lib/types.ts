@@ -69,4 +69,13 @@ export interface JournalState {
     focusMode: boolean
     zoomLevel: number // 0.8, 0.9, 1, 1.1, 1.2, etc.
   }
+  // Google Auth & Sync State
+  authMethod: "guest" | "google"
+  googleId: string | null
+  googleEmail: string | null
+  accessToken: string | null
+  refreshToken: string | null
+  googleDriveSyncEnabled: boolean
+  lastSyncTime: string | null
+  isSyncing: boolean
 }

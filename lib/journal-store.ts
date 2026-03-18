@@ -17,6 +17,15 @@ import { getStorageProvider } from "./storage/storage"
 import { createZustandStorage } from "./storage/zustand-adapter"
 import { tagPresets } from "./tag-presets"
 
+// Feature flag for Google Sign-In and Drive Sync
+export const GOOGLE_SYNC_ENABLED = true
+
+// Google OAuth Configuration
+export const GOOGLE_CONFIG = {
+  clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
+  scopes: ["https://www.googleapis.com/auth/drive.appdata"],
+}
+
 const generateId = () => Math.random().toString(36).substring(2, 15)
 
 const getToday = () => new Date().toISOString().split("T")[0]
@@ -69,6 +78,14 @@ interface JournalStore extends JournalState {
   toggleSetting: (setting: keyof JournalState["settings"]) => void
   setZoom: (zoomLevel: number) => void
   setUserName: (name: string) => void
+
+  // Auth & Google Sync Actions
+  setAuthMethod: (method: "guest" | "google") => void
+  setGoogleUser: (googleId: string, email: string, accessToken: string, refreshToken?: string) => void
+  clearGoogleAuth: () => void
+  setGoogleDriveSyncEnabled: (enabled: boolean) => void
+  setLastSyncTime: (time: string | null) => void
+  getSyncStatus: () => "not_configured" | "configured" | "syncing"
 }
 
 const statusCycle: BulletStatus[] = ["open", "complete", "migrated", "scheduled", "irrelevant"]
@@ -88,6 +105,16 @@ export const useJournalStore = create<JournalStore>()(
         focusMode: false,
         zoomLevel: 1,
       },
+
+      // Auth state
+      authMethod: "guest" as "guest" | "google",
+      googleId: null as string | null,
+      googleEmail: null as string | null,
+      accessToken: null as string | null,
+      refreshToken: null as string | null,
+      googleDriveSyncEnabled: false,
+      lastSyncTime: null as string | null,
+      isSyncing: false,
 
       getDailyLog: (date: string) => {
         const { dailyLogs } = get()
@@ -477,10 +504,54 @@ export const useJournalStore = create<JournalStore>()(
       setUserName: (name) => {
         set({ userName: name.trim() })
       },
+
+      // Auth Actions
+      setAuthMethod: (method) => {
+        set({ authMethod: method })
+      },
+
+      setGoogleUser: (googleId, email, accessToken, refreshToken) => {
+        set({
+          googleId,
+          googleEmail: email,
+          accessToken,
+          refreshToken: refreshToken || null,
+          authMethod: "google",
+        })
+      },
+
+      clearGoogleAuth: () => {
+        set({
+          authMethod: "guest",
+          googleId: null,
+          googleEmail: null,
+          accessToken: null,
+          refreshToken: null,
+          googleDriveSyncEnabled: false,
+          lastSyncTime: null,
+          isSyncing: false,
+        })
+      },
+
+      setGoogleDriveSyncEnabled: (enabled) => {
+        set({ googleDriveSyncEnabled: enabled })
+      },
+
+      setLastSyncTime: (time) => {
+        set({ lastSyncTime: time })
+      },
+
+      getSyncStatus: () => {
+        const { authMethod, googleId, isSyncing } = get()
+        if (isSyncing) return "syncing"
+        if (authMethod === "google" && googleId) return "configured"
+        return "not_configured"
+      },
     }),
     {
       name: "bullet-journal-storage",
       storage: createZustandStorage(getStorageProvider()),
+      skipHydration: true,
     },
   ),
 )
