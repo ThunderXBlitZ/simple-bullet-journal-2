@@ -10,6 +10,7 @@ import { Moon, Sun, LogOut } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useJournalStore, GOOGLE_SYNC_ENABLED, GOOGLE_CONFIG } from "@/lib/journal-store"
 import { signInWithGoogle, signOutFromGoogle } from "@/lib/google/auth"
+import { setActiveStorageKey, clearActiveStorageKey, clearPersistedGuestId } from "@/lib/storage/zustand-adapter"
 import { uploadToDrive, getLastSyncTime } from "@/lib/google/drive"
 import {
   checkForConflicts,
@@ -32,6 +33,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const {
     userName,
     setUserName,
+    resetStore,
     authMethod,
     googleEmail,
     setGoogleUser,
@@ -84,24 +86,34 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
     try {
       const user = await signInWithGoogle()
+
+      // Switch storage key to Google namespace BEFORE any store writes.
+      // The in-memory store still holds the guest's data — this is intentional.
+      // The first write after this point migrates guest data to the Google key.
+      setActiveStorageKey(`bj-google-${user.id}`)
       setGoogleUser(user.id, user.email, "", "")
       toast.success("Signed in with Google!")
 
-      // Check for conflicts between local and Drive data
+      // Check for conflicts between guest (local) data and Drive data
       const conflict = await checkForConflicts()
 
       if (conflict.hasConflict) {
-        // Save current state as backup for undo
+        // Both sides have data — let user decide
         const backup = createStateBackup()
         setPreSignInBackup(backup)
         setLocalSummary(conflict.localSummary)
         setDriveSummary(conflict.driveSummary)
         setShowConflictModal(true)
+        // clearPersistedGuestId() called in handleMergeStrategy after resolution
       } else if (conflict.driveSummary?.hasData) {
-        // No conflict but Drive has data - default to keep-both
+        // Drive has data, local (guest) doesn't — pull Drive data
         await handleMergeStrategy("keep-both")
+        // clearPersistedGuestId() called inside handleMergeStrategy
+      } else {
+        // Drive is empty — guest data migrates automatically via auto-sync.
+        // Migration is complete; sever the guest identity link.
+        clearPersistedGuestId()
       }
-      // else: No data on Drive, local data will sync automatically via auto-sync
     } catch (error) {
       console.error("Google sign-in failed:", error)
       toast.error("Failed to sign in with Google")
@@ -118,6 +130,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
       // Apply the merge strategy
       await applyMergeStrategy(strategy)
+
+      // Migration complete — guest identity no longer needed
+      clearPersistedGuestId()
 
       // Show undo toast for 10 seconds
       setShowUndoToast(true)
@@ -165,6 +180,18 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     signOutFromGoogle()
     clearGoogleAuth()
     toast.success("Signed out from Google")
+  }
+
+  const handleLogout = () => {
+    // Clear storage key first, before clearing any store state
+    clearActiveStorageKey()
+    // Reset all store data to prevent data leak to next user
+    resetStore()
+    if (authMethod === "google") {
+      signOutFromGoogle()
+    }
+    onOpenChange(false)
+    toast.success("Logged out")
   }
 
   const handleToggleSync = async (enabled: boolean) => {
@@ -393,6 +420,18 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               )}
             </>
           )}
+
+          <Separator />
+
+          {/* Logout */}
+          <Button
+            onClick={handleLogout}
+            variant="destructive"
+            className="w-full"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
