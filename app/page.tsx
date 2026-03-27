@@ -12,9 +12,16 @@ import { CollectionsView } from "@/components/journal/collections-view"
 import { CommandPalette } from "@/components/journal/command-palette"
 import { SetupModal } from "@/components/journal/setup-modal"
 import { SettingsModal } from "@/components/journal/settings-modal"
-import { useJournalStore, GOOGLE_SYNC_ENABLED, GOOGLE_CONFIG } from "@/lib/journal-store"
+import { useJournalStore, GOOGLE_SYNC_ENABLED, GOOGLE_CONFIG, generateGuestId } from "@/lib/journal-store"
 import { initializeGoogle, setAccessToken } from "@/lib/google/auth"
 import { debouncedSync, cancelSync } from "@/lib/google/auto-sync"
+import {
+  setActiveStorageKey,
+  clearActiveStorageKey,
+  getPersistedActiveKey,
+  persistGuestId,
+  getPersistedGuestId,
+} from "@/lib/storage/zustand-adapter"
 import { cn } from "@/lib/utils"
 
 type View = "daily" | "weekly" | "monthly" | "habits" | "collections"
@@ -24,7 +31,6 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<View>("daily")
   const [commandOpen, setCommandOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
-  const [showSetupModal, setShowSetupModal] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const { settings, toggleSetting, userName, setUserName, authMethod, accessToken, setGoogleUser, setAuthMethod } =
     useJournalStore()
@@ -32,8 +38,24 @@ export default function Home() {
   // Mark as mounted and rehydrate store — until this fires,
   // both server and client render the same empty shell (no mismatch)
   useEffect(() => {
-    useJournalStore.persist.rehydrate()
-    setMounted(true)
+    const initializeApp = async () => {
+      // Priority 1: restore the active session key (set on login, cleared on logout)
+      const savedKey = getPersistedActiveKey()
+      if (savedKey) {
+        setActiveStorageKey(savedKey)
+      } else {
+        // Priority 2: returning guest — they logged out but their identity persists
+        const savedGuestId = getPersistedGuestId()
+        if (savedGuestId) {
+          setActiveStorageKey(`bj-guest-${savedGuestId}`)
+        }
+        // If neither exists: first-time user — rehydrate gets empty state, SetupModal shows
+      }
+
+      await useJournalStore.persist.rehydrate()
+      setMounted(true)
+    }
+    initializeApp()
   }, [])
 
   // Initialize Google Sign-In on app load
@@ -41,7 +63,7 @@ export default function Home() {
     const initGoogle = async () => {
       if (GOOGLE_SYNC_ENABLED && GOOGLE_CONFIG.clientId) {
         try {
-          await initializeGoogle(GOOGLE_CONFIG)
+          await initializeGoogle(GOOGLE_CONFIG as { clientId: string; scope: string[] })
           // Restore access token if it exists
           if (accessToken) {
             setAccessToken(accessToken)
@@ -62,23 +84,10 @@ export default function Home() {
     }
 
     // Subscribe to store changes and trigger debounced sync
-    const unsubscribe = useJournalStore.subscribe(
-      (state) => ({
-        dailyLogs: state.dailyLogs,
-        tags: state.tags,
-        habits: state.habits,
-        habitCompletions: state.habitCompletions,
-        collections: state.collections,
-        userName: state.userName,
-        settings: state.settings,
-        googleDriveSyncEnabled: state.googleDriveSyncEnabled,
-        authMethod: state.authMethod,
-      }),
-      (newState) => {
-        // Trigger debounced sync on any data change
-        debouncedSync()
-      }
-    )
+    const unsubscribe = useJournalStore.subscribe(() => {
+      // Trigger debounced sync on any state change
+      debouncedSync()
+    })
 
     // Cleanup on unmount
     return () => {
@@ -92,30 +101,28 @@ export default function Home() {
     document.documentElement.style.fontSize = `${settings.zoomLevel * 100}%`
   }, [settings.zoomLevel])
 
-  // Show setup modal on first visit
-  useEffect(() => {
-    if (!userName) {
-      setShowSetupModal(true)
-    }
-  }, [])
-
   const handleDateClick = (date: Date) => {
     setSelectedDate(date)
     setCurrentView("daily")
   }
 
   const handleSetupComplete = (authMethod: "guest" | "google", name: string, googleData?: any) => {
-    setUserName(name)
-
     if (authMethod === "google" && googleData) {
-      // Store Google auth info
+      // Set storage key BEFORE store writes for Google users
+      setActiveStorageKey(`bj-google-${googleData.id}`)
       setGoogleUser(googleData.id, googleData.email, "", "")
     } else {
-      // Guest mode - just set auth method
+      // Guest mode: use persisted ID if this is a returning guest,
+      // otherwise generate a fresh one
+      const existingGuestId = getPersistedGuestId()
+      const guestId = existingGuestId ?? generateGuestId()
+      setActiveStorageKey(`bj-guest-${guestId}`)
+      persistGuestId(guestId) // survives future logouts
+      useJournalStore.setState({ guestId })
       setAuthMethod("guest")
     }
 
-    setShowSetupModal(false)
+    setUserName(name)
   }
 
   // Command palette keyboard shortcut
@@ -153,6 +160,16 @@ export default function Home() {
   // This app is fully client-side (localStorage/IndexedDB) so SSR content has no value.
   if (!mounted) {
     return <div className="flex flex-col md:flex-row h-screen bg-background overflow-hidden" />
+  }
+
+  // Don't render journal content until user is logged in
+  // This prevents data leakage of previous users' data
+  if (!userName) {
+    return (
+      <div className="flex flex-col md:flex-row h-screen bg-background overflow-hidden">
+        <SetupModal open={true} onComplete={handleSetupComplete} />
+      </div>
+    )
   }
 
   return (
@@ -206,9 +223,6 @@ export default function Home() {
           <X className="w-6 h-6" />
         </button>
       )}
-
-      {/* Setup Modal */}
-      <SetupModal open={showSetupModal} onComplete={handleSetupComplete} />
 
       {/* Settings Modal */}
       <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
