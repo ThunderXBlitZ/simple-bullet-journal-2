@@ -22,8 +22,8 @@ export const GOOGLE_SYNC_ENABLED = true
 
 // Google OAuth Configuration
 export const GOOGLE_CONFIG = {
-  clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "",
-  scopes: ["https://www.googleapis.com/auth/drive.appdata"],
+  clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+  scope: ["https://www.googleapis.com/auth/drive.appdata"],
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 15)
