@@ -10,6 +10,35 @@ const FILE_NAME = 'bullet-journal-backup.json';
 const FOLDER_NAME = 'appDataFolder';
 
 /**
+ * Error types for sync operations
+ */
+export enum SyncErrorType {
+  NETWORK = "NETWORK",               // fetch threw (no response at all)
+  SERVER_ERROR = "SERVER_ERROR",     // HTTP 500-599
+  RATE_LIMITED = "RATE_LIMITED",     // HTTP 429
+  AUTH_EXPIRED = "AUTH_EXPIRED",     // HTTP 401 after refresh attempt
+  FORBIDDEN = "FORBIDDEN",           // HTTP 403
+  CLIENT_ERROR = "CLIENT_ERROR",     // HTTP 400, 404, other 4xx
+}
+
+/**
+ * Structured error class for sync operations
+ * Used by retry logic and downstream consumers (notifications, offline queue)
+ */
+export class SyncError extends Error {
+  type: SyncErrorType
+  status?: number
+
+  constructor(type: SyncErrorType, message: string, status?: number) {
+    super(message)
+    this.name = "SyncError"
+    this.type = type
+    this.status = status
+    Object.setPrototypeOf(this, SyncError.prototype)
+  }
+}
+
+/**
  * Upload data to Google Drive appDataFolder
  */
 export async function uploadToDrive(data: string): Promise<void> {
