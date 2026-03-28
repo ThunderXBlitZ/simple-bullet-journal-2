@@ -10,7 +10,7 @@ import { Moon, Sun, LogOut } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useJournalStore, GOOGLE_SYNC_ENABLED, GOOGLE_CONFIG } from "@/lib/journal-store"
 import { signInWithGoogle, signOutFromGoogle } from "@/lib/google/auth"
-import { setActiveStorageKey, clearActiveStorageKey, clearPersistedGuestId } from "@/lib/storage/zustand-adapter"
+import { setActiveStorageKey, clearActiveStorageKey, clearPersistedGuestId, registerUser } from "@/lib/storage/zustand-adapter"
 import { uploadToDrive, getLastSyncTime } from "@/lib/google/drive"
 import {
   checkForConflicts,
@@ -90,8 +90,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       // Switch storage key to Google namespace BEFORE any store writes.
       // The in-memory store still holds the guest's data — this is intentional.
       // The first write after this point migrates guest data to the Google key.
-      setActiveStorageKey(`bj-google-${user.id}`)
+      const googleKey = `bj-google-${user.id}`
+      setActiveStorageKey(googleKey)
       setGoogleUser(user.id, user.email, "", "")
+      await registerUser(googleKey, userName, "google")
       toast.success("Signed in with Google!")
 
       // Check for conflicts between guest (local) data and Drive data

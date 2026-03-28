@@ -10,7 +10,7 @@ import { toast } from "sonner"
 
 interface SetupModalProps {
   open: boolean
-  onComplete: (authMethod: "guest" | "google", name: string, googleData?: any) => void
+  onComplete: (authMethod: "guest" | "google", name: string, googleData?: any) => void | Promise<void>
 }
 
 type Step = "auth-choice" | "name-entry"

@@ -21,6 +21,7 @@ import {
   getPersistedActiveKey,
   persistGuestId,
   getPersistedGuestId,
+  registerUser,
 } from "@/lib/storage/zustand-adapter"
 import { cn } from "@/lib/utils"
 
@@ -40,12 +41,12 @@ export default function Home() {
   useEffect(() => {
     const initializeApp = async () => {
       // Priority 1: restore the active session key (set on login, cleared on logout)
-      const savedKey = getPersistedActiveKey()
+      const savedKey = await getPersistedActiveKey()
       if (savedKey) {
         setActiveStorageKey(savedKey)
       } else {
         // Priority 2: returning guest — they logged out but their identity persists
-        const savedGuestId = getPersistedGuestId()
+        const savedGuestId = await getPersistedGuestId()
         if (savedGuestId) {
           setActiveStorageKey(`bj-guest-${savedGuestId}`)
         }
@@ -106,20 +107,24 @@ export default function Home() {
     setCurrentView("daily")
   }
 
-  const handleSetupComplete = (authMethod: "guest" | "google", name: string, googleData?: any) => {
+  const handleSetupComplete = async (authMethod: "guest" | "google", name: string, googleData?: any) => {
     if (authMethod === "google" && googleData) {
+      const userKey = `bj-google-${googleData.id}`
       // Set storage key BEFORE store writes for Google users
-      setActiveStorageKey(`bj-google-${googleData.id}`)
+      setActiveStorageKey(userKey)
       setGoogleUser(googleData.id, googleData.email, "", "")
+      await registerUser(userKey, name, "google")
     } else {
       // Guest mode: use persisted ID if this is a returning guest,
       // otherwise generate a fresh one
-      const existingGuestId = getPersistedGuestId()
+      const existingGuestId = await getPersistedGuestId()
       const guestId = existingGuestId ?? generateGuestId()
-      setActiveStorageKey(`bj-guest-${guestId}`)
+      const userKey = `bj-guest-${guestId}`
+      setActiveStorageKey(userKey)
       persistGuestId(guestId) // survives future logouts
       useJournalStore.setState({ guestId })
       setAuthMethod("guest")
+      await registerUser(userKey, name, "guest")
     }
 
     setUserName(name)

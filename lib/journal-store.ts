@@ -13,7 +13,6 @@ import type {
   BulletStatus,
   Tag,
 } from "./types"
-import { getStorageProvider } from "./storage/storage"
 import { createZustandStorage } from "./storage/zustand-adapter"
 import { tagPresets } from "./tag-presets"
 
@@ -23,10 +22,26 @@ export const GOOGLE_SYNC_ENABLED = true
 // Google OAuth Configuration
 export const GOOGLE_CONFIG = {
   clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-  scope: ["https://www.googleapis.com/auth/drive.appdata"],
+  scope: [
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/drive.appdata",
+  ],
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 15)
+
+/**
+ * Generate a unique ID for guest users
+ * Uses crypto.randomUUID if available, falls back to Math.random
+ */
+const generateGuestId = (): string => {
+  if (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID) {
+    return window.crypto.randomUUID()
+  }
+  // Fallback for environments without crypto.randomUUID
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+}
 
 const getToday = () => new Date().toISOString().split("T")[0]
 
@@ -78,9 +93,11 @@ interface JournalStore extends JournalState {
   toggleSetting: (setting: keyof JournalState["settings"]) => void
   setZoom: (zoomLevel: number) => void
   setUserName: (name: string) => void
+  resetStore: () => void
 
   // Auth & Google Sync Actions
   setAuthMethod: (method: "guest" | "google") => void
+  setGuestId: (id: string) => void
   setGoogleUser: (googleId: string, email: string, accessToken: string, refreshToken?: string) => void
   clearGoogleAuth: () => void
   setGoogleDriveSyncEnabled: (enabled: boolean) => void
@@ -108,6 +125,7 @@ export const useJournalStore = create<JournalStore>()(
 
       // Auth state
       authMethod: "guest" as "guest" | "google",
+      guestId: null as string | null,
       googleId: null as string | null,
       googleEmail: null as string | null,
       accessToken: null as string | null,
@@ -505,9 +523,39 @@ export const useJournalStore = create<JournalStore>()(
         set({ userName: name.trim() })
       },
 
+      resetStore: () => {
+        set({
+          dailyLogs: {},
+          tags: initializePresetTags(),
+          habits: [],
+          habitCompletions: [],
+          collections: [],
+          userName: "",
+          settings: {
+            showDots: true,
+            showLines: false,
+            focusMode: false,
+            zoomLevel: 1,
+          },
+          authMethod: "guest",
+          guestId: null,
+          googleId: null,
+          googleEmail: null,
+          accessToken: null,
+          refreshToken: null,
+          googleDriveSyncEnabled: false,
+          lastSyncTime: null,
+          isSyncing: false,
+        })
+      },
+
       // Auth Actions
       setAuthMethod: (method) => {
         set({ authMethod: method })
+      },
+
+      setGuestId: (id) => {
+        set({ guestId: id })
       },
 
       setGoogleUser: (googleId, email, accessToken, refreshToken) => {
@@ -550,8 +598,10 @@ export const useJournalStore = create<JournalStore>()(
     }),
     {
       name: "bullet-journal-storage",
-      storage: createZustandStorage(getStorageProvider()),
+      storage: createZustandStorage(),
       skipHydration: true,
     },
   ),
 )
+
+export { generateGuestId }

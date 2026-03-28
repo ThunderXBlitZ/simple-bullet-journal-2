@@ -1,5 +1,8 @@
 /**
  * Storage abstraction layer for persisting journal data
+ * Uses IndexedDB with two object stores:
+ *   "data" — journal state, keyed by user storage key (bj-guest-{id}, bj-google-{id})
+ *   "meta" — metadata: activeUserKey, guestId, user registry
  */
 
 export interface StorageProvider {
@@ -9,29 +12,37 @@ export interface StorageProvider {
   clear(): Promise<void>
 }
 
+const DB_NAME = "BulletJournalDB"
+const DB_VERSION = 2
+const DATA_STORE = "data"
+const META_STORE = "meta"
+
 /**
- * IndexedDB implementation of StorageProvider
+ * Singleton IndexedDB instance — lazy-initialized on first use.
+ * Because getStorageProvider() is called at module init time in journal-store.ts
+ * (which runs during Next.js SSR where window is undefined), we must NOT open
+ * IndexedDB at construction time. We open it lazily inside getDB() which is
+ * only called from the async adapter methods — always client-side, after mount.
  */
-export class IndexedDBStorage implements StorageProvider {
-  private dbName = "BulletJournalDB"
-  private storeName = "data"
+class IndexedDBStorage implements StorageProvider {
   private dbPromise: Promise<IDBDatabase> | null = null
 
-  private async getDB(): Promise<IDBDatabase> {
-    if (this.dbPromise) {
-      return this.dbPromise
-    }
+  private getDB(): Promise<IDBDatabase> {
+    if (this.dbPromise) return this.dbPromise
 
     this.dbPromise = new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, 1)
+      const request = indexedDB.open(DB_NAME, DB_VERSION)
 
       request.onerror = () => reject(request.error)
       request.onsuccess = () => resolve(request.result)
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result
-        if (!db.objectStoreNames.contains(this.storeName)) {
-          db.createObjectStore(this.storeName)
+        if (!db.objectStoreNames.contains(DATA_STORE)) {
+          db.createObjectStore(DATA_STORE)
+        }
+        if (!db.objectStoreNames.contains(META_STORE)) {
+          db.createObjectStore(META_STORE)
         }
       }
     })
@@ -39,17 +50,26 @@ export class IndexedDBStorage implements StorageProvider {
     return this.dbPromise
   }
 
+  private async withStore<T>(
+    storeName: string,
+    mode: IDBTransactionMode,
+    fn: (store: IDBObjectStore) => IDBRequest<T>,
+  ): Promise<T | null> {
+    const db = await this.getDB()
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, mode)
+      const store = tx.objectStore(storeName)
+      const req = fn(store)
+      req.onerror = () => reject(req.error)
+      req.onsuccess = () => resolve(req.result ?? null)
+    })
+  }
+
+  // ── Data store (journal state) ──────────────────────────────────────
+
   async getItem(key: string): Promise<string | null> {
     try {
-      const db = await this.getDB()
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction(this.storeName, "readonly")
-        const store = transaction.objectStore(this.storeName)
-        const request = store.get(key)
-
-        request.onerror = () => reject(request.error)
-        request.onsuccess = () => resolve(request.result || null)
-      })
+      return await this.withStore<string>(DATA_STORE, "readonly", (s) => s.get(key))
     } catch (error) {
       console.error("IndexedDB getItem error:", error)
       return null
@@ -58,15 +78,7 @@ export class IndexedDBStorage implements StorageProvider {
 
   async setItem(key: string, value: string): Promise<void> {
     try {
-      const db = await this.getDB()
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction(this.storeName, "readwrite")
-        const store = transaction.objectStore(this.storeName)
-        const request = store.put(value, key)
-
-        request.onerror = () => reject(request.error)
-        request.onsuccess = () => resolve()
-      })
+      await this.withStore(DATA_STORE, "readwrite", (s) => s.put(value, key))
     } catch (error) {
       console.error("IndexedDB setItem error:", error)
     }
@@ -74,15 +86,7 @@ export class IndexedDBStorage implements StorageProvider {
 
   async removeItem(key: string): Promise<void> {
     try {
-      const db = await this.getDB()
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction(this.storeName, "readwrite")
-        const store = transaction.objectStore(this.storeName)
-        const request = store.delete(key)
-
-        request.onerror = () => reject(request.error)
-        request.onsuccess = () => resolve()
-      })
+      await this.withStore(DATA_STORE, "readwrite", (s) => s.delete(key))
     } catch (error) {
       console.error("IndexedDB removeItem error:", error)
     }
@@ -90,72 +94,64 @@ export class IndexedDBStorage implements StorageProvider {
 
   async clear(): Promise<void> {
     try {
-      const db = await this.getDB()
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction(this.storeName, "readwrite")
-        const store = transaction.objectStore(this.storeName)
-        const request = store.clear()
-
-        request.onerror = () => reject(request.error)
-        request.onsuccess = () => resolve()
-      })
+      await this.withStore(DATA_STORE, "readwrite", (s) => s.clear())
     } catch (error) {
       console.error("IndexedDB clear error:", error)
     }
   }
-}
 
-/**
- * LocalStorage implementation of StorageProvider (fallback)
- */
-export class LocalStorageProvider implements StorageProvider {
-  async getItem(key: string): Promise<string | null> {
+  // ── Meta store (active key, guest ID, user registry) ─────────────────
+
+  async getMeta(key: string): Promise<string | null> {
     try {
-      return typeof window !== "undefined" ? localStorage.getItem(key) : null
+      return await this.withStore<string>(META_STORE, "readonly", (s) => s.get(key))
     } catch (error) {
-      console.error("LocalStorage getItem error:", error)
+      console.error("IndexedDB getMeta error:", error)
       return null
     }
   }
 
-  async setItem(key: string, value: string): Promise<void> {
+  async setMeta(key: string, value: string): Promise<void> {
     try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem(key, value)
-      }
+      await this.withStore(META_STORE, "readwrite", (s) => s.put(value, key))
     } catch (error) {
-      console.error("LocalStorage setItem error:", error)
+      console.error("IndexedDB setMeta error:", error)
     }
   }
 
-  async removeItem(key: string): Promise<void> {
+  async removeMeta(key: string): Promise<void> {
     try {
-      if (typeof window !== "undefined") {
-        localStorage.removeItem(key)
-      }
+      await this.withStore(META_STORE, "readwrite", (s) => s.delete(key))
     } catch (error) {
-      console.error("LocalStorage removeItem error:", error)
+      console.error("IndexedDB removeMeta error:", error)
     }
   }
 
-  async clear(): Promise<void> {
-    try {
-      if (typeof window !== "undefined") {
-        localStorage.clear()
-      }
-    } catch (error) {
-      console.error("LocalStorage clear error:", error)
-    }
+  /** Save display name + auth method for a user key (e.g. "bj-guest-{id}") */
+  async registerUser(userKey: string, displayName: string, authMethod: "guest" | "google"): Promise<void> {
+    await this.setMeta(`user/${userKey}`, JSON.stringify({ displayName, authMethod }))
+  }
+
+  /** Look up a registered user by their storage key */
+  async getUser(userKey: string): Promise<{ displayName: string; authMethod: "guest" | "google" } | null> {
+    const raw = await this.getMeta(`user/${userKey}`)
+    return raw ? JSON.parse(raw) : null
   }
 }
+
+// ── Singleton ────────────────────────────────────────────────────────────────
+
+let _db: IndexedDBStorage | null = null
 
 /**
- * Get the appropriate storage provider
- * Tries IndexedDB first, falls back to localStorage
+ * Returns the singleton IndexedDBStorage instance.
+ * Safe to call at module load time — the DB connection is opened lazily
+ * inside each method, never at construction time.
  */
-export function getStorageProvider(): StorageProvider {
-  if (typeof window !== "undefined" && "indexedDB" in window) {
-    return new IndexedDBStorage()
-  }
-  return new LocalStorageProvider()
+export function getStorageProvider(): IndexedDBStorage {
+  if (!_db) _db = new IndexedDBStorage()
+  return _db
 }
+
+// Re-export type for use in zustand-adapter
+export type { IndexedDBStorage }

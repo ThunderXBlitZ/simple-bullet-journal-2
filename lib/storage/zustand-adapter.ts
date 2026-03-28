@@ -1,106 +1,120 @@
 /**
- * Zustand storage adapter for our custom StorageProvider
+ * Zustand storage adapter for our custom StorageProvider.
+ * Also exposes helpers for reading/writing per-user metadata
+ * (active storage key, guest ID) — all backed by IndexedDB, no localStorage.
  */
 
 import type { PersistStorage, StorageValue } from "zustand/middleware"
-import type { StorageProvider } from "./storage"
+import { getStorageProvider } from "./storage"
+
+// ── Active key (in-memory routing) ──────────────────────────────────────────
 
 /**
- * Module-level active storage key for per-user namespacing
- * When set, all storage operations use this key instead of the default
- * Fallback to original key name enables migration for existing users
+ * Module-level variable: which IndexedDB key to route all store reads/writes to.
+ * Set before rehydrate / before any store.set() calls during auth.
  */
 let activeKey: string | null = null
 
 /**
- * Set the active storage key and persist to localStorage
- * Call this before any store writes (e.g., during auth flow)
+ * Set the active storage key for the current user.
+ * - Updates the in-memory router immediately (synchronous)
+ * - Persists to IndexedDB "meta" store asynchronously (fire-and-forget)
  */
 export function setActiveStorageKey(key: string): void {
   activeKey = key
-  if (typeof localStorage !== "undefined") {
-    localStorage.setItem("bj-active-user-key", key)
-  }
+  getStorageProvider().setMeta("activeUserKey", key).catch(console.error)
 }
 
 /**
- * Clear the active storage key and remove pointer from localStorage
- * Call this on logout
+ * Clear the active storage key on logout.
+ * - Clears the in-memory router immediately
+ * - Removes from IndexedDB "meta" store asynchronously
  */
 export function clearActiveStorageKey(): void {
   activeKey = null
-  if (typeof localStorage !== "undefined") {
-    localStorage.removeItem("bj-active-user-key")
-  }
+  getStorageProvider().removeMeta("activeUserKey").catch(console.error)
 }
 
 /**
- * Get the persisted active key from localStorage
- * Used on app startup to restore the previous user's context
+ * Read the previously-active storage key from IndexedDB.
+ * Called during app startup before rehydrate().
  */
-export function getPersistedActiveKey(): string | null {
-  if (typeof localStorage === "undefined") {
-    return null
-  }
-  return localStorage.getItem("bj-active-user-key")
+export async function getPersistedActiveKey(): Promise<string | null> {
+  return getStorageProvider().getMeta("activeUserKey")
 }
 
+// ── Guest ID (permanent identity) ────────────────────────────────────────────
+
 /**
- * Permanently save the guest's UUID so they can restore their account after logout.
- * Unlike the active-user-key, this is NOT cleared on logout.
+ * Permanently save the guest's UUID.
+ * NOT cleared on logout — lets returning guests auto-restore their data.
  */
 export function persistGuestId(id: string): void {
-  if (typeof localStorage !== "undefined") {
-    localStorage.setItem("bj-guest-id", id)
-  }
+  getStorageProvider().setMeta("guestId", id).catch(console.error)
 }
 
 /**
- * Read the persisted guest UUID. Returns null if user has never been a guest
- * or has migrated to Google (clearPersistedGuestId was called).
+ * Read the persisted guest UUID from IndexedDB.
+ * Returns null if user has never been a guest or has migrated to Google.
  */
-export function getPersistedGuestId(): string | null {
-  if (typeof localStorage === "undefined") return null
-  return localStorage.getItem("bj-guest-id")
+export async function getPersistedGuestId(): Promise<string | null> {
+  return getStorageProvider().getMeta("guestId")
 }
 
 /**
- * Clear the persisted guest UUID. Call this when a guest migrates to Google
+ * Clear the guest UUID after a guest migrates to Google,
  * so they no longer fall back to the guest account on startup.
  */
 export function clearPersistedGuestId(): void {
-  if (typeof localStorage !== "undefined") {
-    localStorage.removeItem("bj-guest-id")
-  }
+  getStorageProvider().removeMeta("guestId").catch(console.error)
 }
 
+// ── User registry ─────────────────────────────────────────────────────────────
+
 /**
- * Create a Zustand-compatible storage object from our StorageProvider
+ * Register a user in the IndexedDB user registry.
+ * Call after auth is established, before setUserName().
  */
-export function createZustandStorage<T>(provider: StorageProvider): PersistStorage<T> {
+export async function registerUser(
+  userKey: string,
+  displayName: string,
+  authMethod: "guest" | "google",
+): Promise<void> {
+  return getStorageProvider().registerUser(userKey, displayName, authMethod)
+}
+
+// ── Zustand storage adapter ───────────────────────────────────────────────────
+
+/**
+ * Create a Zustand PersistStorage adapter backed by IndexedDB.
+ * All reads/writes are routed through `activeKey` for per-user isolation.
+ */
+export function createZustandStorage<T>(): PersistStorage<T> {
   return {
     getItem: async (key: string) => {
       try {
         const finalKey = activeKey ?? key
-        const value = await provider.getItem(finalKey)
-        return value ? JSON.parse(value) : null
+        const value = await getStorageProvider().getItem(finalKey)
+        return value ? (JSON.parse(value) as StorageValue<T>) : null
       } catch (error) {
         console.error("Failed to get item from storage:", error)
         return null
       }
     },
+
     setItem: async (key: string, value: StorageValue<T>) => {
       try {
         const finalKey = activeKey ?? key
-        await provider.setItem(finalKey, JSON.stringify(value))
+        await getStorageProvider().setItem(finalKey, JSON.stringify(value))
       } catch (error) {
         console.error("Failed to set item in storage:", error)
       }
     },
+
     removeItem: async (key: string) => {
       try {
         const finalKey = activeKey ?? key
-        await provider.removeItem(finalKey)
+        await getStorageProvider().removeItem(finalKey)
       } catch (error) {
         console.error("Failed to remove item from storage:", error)
       }
