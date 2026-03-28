@@ -169,13 +169,13 @@ async function withRetry<T>(
  * Upload data to Google Drive appDataFolder
  */
 export async function uploadToDrive(data: string): Promise<void> {
-  let token = getAccessToken();
+  const token = getAccessToken();
   if (!token) {
-    throw new Error('Not authenticated');
+    throw new SyncError(SyncErrorType.AUTH_EXPIRED, "Not authenticated with Google");
   }
 
-  try {
-    // First, try to find existing file
+  await withRetry(async () => {
+    // Find existing file
     const existingFileId = await findBackupFile(token);
 
     if (existingFileId) {
@@ -185,40 +185,26 @@ export async function uploadToDrive(data: string): Promise<void> {
       // Create new file
       await createFile(data, token);
     }
-  } catch (error) {
-    // If token expired, refresh and retry once
-    if (error instanceof Error && error.message.includes('401')) {
-      token = await refreshAccessToken();
-      const existingFileId = await findBackupFile(token);
-
-      if (existingFileId) {
-        await updateFile(existingFileId, data, token);
-      } else {
-        await createFile(data, token);
-      }
-    } else {
-      throw error;
-    }
-  }
+  });
 }
 
 /**
  * Download data from Google Drive appDataFolder
  */
 export async function downloadFromDrive(): Promise<string | null> {
-  let token = getAccessToken();
+  const token = getAccessToken();
   if (!token) {
-    throw new Error('Not authenticated');
+    throw new SyncError(SyncErrorType.AUTH_EXPIRED, "Not authenticated with Google");
   }
 
-  try {
+  return await withRetry(async () => {
     const fileId = await findBackupFile(token);
     if (!fileId) {
       return null; // No backup exists yet
     }
 
     const response = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -226,38 +212,11 @@ export async function downloadFromDrive(): Promise<string | null> {
       }
     );
 
-    if (!response.ok) {
-      throw new Error(`Failed to download: ${response.statusText}`);
-    }
+    const error = classifyResponse(response);
+    if (error) throw error;
 
     return await response.text();
-  } catch (error) {
-    // If token expired, refresh and retry once
-    if (error instanceof Error && error.message.includes('401')) {
-      token = await refreshAccessToken();
-      const fileId = await findBackupFile(token);
-      if (!fileId) {
-        return null;
-      }
-
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to download: ${response.statusText}`);
-      }
-
-      return await response.text();
-    } else {
-      throw error;
-    }
-  }
+  });
 }
 
 /**
@@ -273,9 +232,8 @@ async function findBackupFile(token: string): Promise<string | null> {
     }
   );
 
-  if (!response.ok) {
-    throw new Error(`Failed to search files: ${response.statusText}`);
-  }
+  const error = classifyResponse(response);
+  if (error) throw error;
 
   const data = await response.json();
   return data.files?.[0]?.id || null;
@@ -309,9 +267,8 @@ async function createFile(data: string, token: string): Promise<void> {
     }
   );
 
-  if (!response.ok) {
-    throw new Error(`Failed to create file: ${response.statusText}`);
-  }
+  const error = classifyResponse(response);
+  if (error) throw error;
 }
 
 /**
@@ -330,41 +287,41 @@ async function updateFile(fileId: string, data: string, token: string): Promise<
     }
   );
 
-  if (!response.ok) {
-    throw new Error(`Failed to update file: ${response.statusText}`);
-  }
+  const error = classifyResponse(response);
+  if (error) throw error;
 }
 
 /**
  * Get last sync timestamp from Drive file metadata
  */
 export async function getLastSyncTime(): Promise<Date | null> {
-  let token = getAccessToken();
+  const token = getAccessToken();
   if (!token) {
     return null;
   }
 
   try {
-    const fileId = await findBackupFile(token);
-    if (!fileId) {
-      return null;
-    }
-
-    const response = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?fields=modifiedTime`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+    return await withRetry(async () => {
+      const fileId = await findBackupFile(token);
+      if (!fileId) {
+        return null;
       }
-    );
 
-    if (!response.ok) {
-      return null;
-    }
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?fields=modifiedTime&supportsAllDrives=true`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    const data = await response.json();
-    return data.modifiedTime ? new Date(data.modifiedTime) : null;
+      const error = classifyResponse(response);
+      if (error) throw error;
+
+      const data = await response.json();
+      return data.modifiedTime ? new Date(data.modifiedTime) : null;
+    });
   } catch {
     return null;
   }
