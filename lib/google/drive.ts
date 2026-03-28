@@ -39,6 +39,29 @@ export class SyncError extends Error {
 }
 
 /**
+ * Classify a fetch response into a SyncError if not ok
+ * Returns null if response is ok
+ */
+function classifyResponse(response: Response): SyncError | null {
+  if (response.ok) return null
+
+  const status = response.status
+  if (status === 429) {
+    return new SyncError(SyncErrorType.RATE_LIMITED, "Rate limited by Google Drive", status)
+  }
+  if (status >= 500) {
+    return new SyncError(SyncErrorType.SERVER_ERROR, `Server error ${status}`, status)
+  }
+  if (status === 401) {
+    return new SyncError(SyncErrorType.AUTH_EXPIRED, "Token expired or invalid", status)
+  }
+  if (status === 403) {
+    return new SyncError(SyncErrorType.FORBIDDEN, "Forbidden", status)
+  }
+  return new SyncError(SyncErrorType.CLIENT_ERROR, `Client error ${status}`, status)
+}
+
+/**
  * Upload data to Google Drive appDataFolder
  */
 export async function uploadToDrive(data: string): Promise<void> {
