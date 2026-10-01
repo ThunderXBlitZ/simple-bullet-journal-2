@@ -71,6 +71,7 @@ export interface JournalState {
   }
   // Google Auth & Sync State
   authMethod: "guest" | "google"
+  guestId: string | null
   googleId: string | null
   googleEmail: string | null
   accessToken: string | null

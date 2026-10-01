@@ -69,6 +69,35 @@ export function clearPersistedGuestId(): void {
   getStorageProvider().removeMeta("guestId").catch(console.error)
 }
 
+// ── Google Auth Token ─────────────────────────────────────────────────────
+
+/**
+ * Persist the Google access token and its expiry epoch (ms) to IndexedDB.
+ * Call after a successful sign-in or silent refresh.
+ */
+export function persistGoogleToken(token: string, expiryMs: number): void {
+  getStorageProvider().setMeta("googleAuth/accessToken", token).catch(console.error)
+  getStorageProvider().setMeta("googleAuth/tokenExpiry", String(expiryMs)).catch(console.error)
+}
+
+/**
+ * Read the persisted Google access token. Returns null if absent or expired.
+ */
+export async function getPersistedGoogleToken(): Promise<{ token: string; expiryMs: number } | null> {
+  const token = await getStorageProvider().getMeta("googleAuth/accessToken")
+  const expiryRaw = await getStorageProvider().getMeta("googleAuth/tokenExpiry")
+  if (!token || !expiryRaw) return null
+  return { token, expiryMs: Number(expiryRaw) }
+}
+
+/**
+ * Clear the persisted Google access token on sign-out.
+ */
+export function clearPersistedGoogleToken(): void {
+  getStorageProvider().removeMeta("googleAuth/accessToken").catch(console.error)
+  getStorageProvider().removeMeta("googleAuth/tokenExpiry").catch(console.error)
+}
+
 // ── User registry ─────────────────────────────────────────────────────────────
 
 /**
@@ -81,6 +110,16 @@ export async function registerUser(
   authMethod: "guest" | "google",
 ): Promise<void> {
   return getStorageProvider().registerUser(userKey, displayName, authMethod)
+}
+
+/**
+ * Find an existing guest account by display name.
+ * Returns the userKey if found, null otherwise.
+ */
+export async function findGuestByName(name: string): Promise<string | null> {
+  const guests = await getStorageProvider().listUsers("guest")
+  const match = guests.find((g) => g.displayName === name)
+  return match?.userKey ?? null
 }
 
 // ── Zustand storage adapter ───────────────────────────────────────────────────

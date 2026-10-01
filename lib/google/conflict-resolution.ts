@@ -84,7 +84,7 @@ export async function checkForConflicts(): Promise<SyncConflict> {
   const localSummary = getLocalDataSummary()
   const driveSummary = await getDriveDataSummary()
 
-  const hasConflict = localSummary.hasData && driveSummary?.hasData
+  const hasConflict = !!(localSummary.hasData && driveSummary?.hasData)
 
   return {
     localSummary,
@@ -173,7 +173,7 @@ export async function applyMergeStrategy(strategy: MergeStrategy): Promise<void>
       const driveTagMap = new Map(driveData.tags?.map((t: any) => [t.id, t]) || [])
       const localTagMap = new Map(localState.tags.map((t) => [t.id, t]))
       driveTagMap.forEach((tag, id) => {
-        localTagMap.delete(id)
+        localTagMap.delete(id as string)
       })
       const mergedTags = [...driveData.tags || [], ...Array.from(localTagMap.values())]
 
@@ -181,7 +181,7 @@ export async function applyMergeStrategy(strategy: MergeStrategy): Promise<void>
       const driveHabitMap = new Map(driveData.habits?.map((h: any) => [h.id, h]) || [])
       const localHabitMap = new Map(localState.habits.map((h) => [h.id, h]))
       driveHabitMap.forEach((habit, id) => {
-        localHabitMap.delete(id)
+        localHabitMap.delete(id as string)
       })
       const mergedHabits = [...driveData.habits || [], ...Array.from(localHabitMap.values())]
 
@@ -200,7 +200,7 @@ export async function applyMergeStrategy(strategy: MergeStrategy): Promise<void>
       const driveCollectionMap = new Map(driveData.collections?.map((c: any) => [c.id, c]) || [])
       const localCollectionMap = new Map(localState.collections.map((c) => [c.id, c]))
       driveCollectionMap.forEach((col, id) => {
-        localCollectionMap.delete(id)
+        localCollectionMap.delete(id as string)
       })
       const mergedCollections = [...driveData.collections || [], ...Array.from(localCollectionMap.values())]
 

@@ -5,11 +5,14 @@
 
 import { uploadToDrive } from './drive'
 import { useJournalStore } from '@/lib/journal-store'
+import { getAccessToken } from './auth'
+import { toast } from 'sonner'
 
 const DEBOUNCE_DELAY = 5000 // 5 seconds
 
 let syncTimeout: NodeJS.Timeout | null = null
 let isSyncing = false
+let consecutiveFailures = 0
 
 /**
  * Debounced sync function
@@ -19,7 +22,7 @@ export function debouncedSync(): void {
   const store = useJournalStore.getState()
 
   // Check if sync is enabled and user is authenticated
-  if (!store.googleDriveSyncEnabled || store.authMethod !== 'google' || !store.accessToken) {
+  if (!store.googleDriveSyncEnabled || store.authMethod !== 'google' || !getAccessToken()) {
     return
   }
 
@@ -45,7 +48,7 @@ async function performSync(): Promise<void> {
   const store = useJournalStore.getState()
 
   // Double check before syncing
-  if (!store.googleDriveSyncEnabled || store.authMethod !== 'google' || !store.accessToken) {
+  if (!store.googleDriveSyncEnabled || store.authMethod !== 'google' || !getAccessToken()) {
     return
   }
 
@@ -67,11 +70,15 @@ async function performSync(): Promise<void> {
     // Update last sync time
     const now = new Date().toISOString()
     useJournalStore.setState({ lastSyncTime: now })
+    consecutiveFailures = 0
 
     console.log('Auto-sync completed')
   } catch (error) {
+    consecutiveFailures++
+    if (consecutiveFailures === 1) {
+      toast.error("Auto-sync failed. Your changes will sync when the connection is restored.")
+    }
     console.error('Auto-sync failed:', error)
-    // Don't show error toast for auto-sync, just log it
   } finally {
     isSyncing = false
   }

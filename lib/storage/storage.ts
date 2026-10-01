@@ -137,6 +137,36 @@ class IndexedDBStorage implements StorageProvider {
     const raw = await this.getMeta(`user/${userKey}`)
     return raw ? JSON.parse(raw) : null
   }
+
+  /** List all registered users, optionally filtered by auth method */
+  async listUsers(authMethod?: "guest" | "google"): Promise<{ userKey: string; displayName: string; authMethod: "guest" | "google" }[]> {
+    const db = await this.getDB()
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(META_STORE, "readonly")
+      const store = tx.objectStore(META_STORE)
+      const req = store.openCursor()
+      const results: { userKey: string; displayName: string; authMethod: "guest" | "google" }[] = []
+
+      req.onerror = () => reject(req.error)
+      req.onsuccess = () => {
+        const cursor = req.result
+        if (cursor) {
+          const key = cursor.key as string
+          if (key.startsWith("user/")) {
+            try {
+              const data = JSON.parse(cursor.value as string)
+              if (!authMethod || data.authMethod === authMethod) {
+                results.push({ userKey: key.replace("user/", ""), ...data })
+              }
+            } catch { /* skip malformed entries */ }
+          }
+          cursor.continue()
+        } else {
+          resolve(results)
+        }
+      }
+    })
+  }
 }
 
 // ── Singleton ────────────────────────────────────────────────────────────────

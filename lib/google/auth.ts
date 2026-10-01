@@ -3,6 +3,8 @@
  * Uses Google Identity Services library for OAuth2 authentication
  */
 
+import { persistGoogleToken, getPersistedGoogleToken, clearPersistedGoogleToken } from '../storage/zustand-adapter'
+
 interface GoogleUser {
   id: string;
   email: string;
@@ -33,15 +35,12 @@ export async function initializeGoogle(config: GoogleAuthConfig): Promise<void> 
     script.defer = true;
     script.onload = () => {
       if (window.google?.accounts?.oauth2) {
-        // Initialize token client for getting Drive access
+        // Initialize token client with an empty callback — the real callback
+        // is set dynamically per-request in signInWithGoogle()
         tokenClient = window.google.accounts.oauth2.initTokenClient({
           client_id: config.clientId,
           scope: config.scope.join(' '),
-          callback: (response: any) => {
-            if (response.access_token) {
-              currentAccessToken = response.access_token;
-            }
-          },
+          callback: '',
         });
         resolve();
       }
@@ -60,23 +59,28 @@ export async function signInWithGoogle(): Promise<GoogleUser> {
   }
 
   return new Promise((resolve, reject) => {
-    try {
-      // Request Drive access
-      tokenClient.requestAccessToken({ prompt: 'consent' });
-
-      // Give the token client time to set the token
-      setTimeout(() => {
-        if (currentAccessToken) {
-          // Decode the ID token to get user info
-          const idToken = parseIdToken();
-          resolve(idToken);
-        } else {
-          reject(new Error('Failed to get access token'));
+    // Set callback dynamically so it resolves THIS promise when OAuth completes
+    tokenClient.callback = async (response: any) => {
+      if (response.error) {
+        reject(new Error(response.error));
+        return;
+      }
+      if (response.access_token) {
+        currentAccessToken = response.access_token;
+        const expiryMs = Date.now() + (response.expires_in ?? 3585) * 1000
+        persistGoogleToken(response.access_token, expiryMs)
+        try {
+          const user = await fetchUserInfo();
+          resolve(user);
+        } catch (error) {
+          reject(error);
         }
-      }, 500);
-    } catch (error) {
-      reject(error);
-    }
+      } else {
+        reject(new Error('No access token received'));
+      }
+    };
+
+    tokenClient.requestAccessToken({ prompt: 'consent' });
   });
 }
 
@@ -106,6 +110,31 @@ export function setAccessToken(token: string | null): void {
 }
 
 /**
+ * Restore persisted token on app startup
+ * - If non-expired token exists: restore it
+ * - If expired: attempt silent refresh
+ * - If no token: no-op
+ */
+export async function restorePersistedToken(): Promise<void> {
+  const stored = await getPersistedGoogleToken();
+  if (!stored) return;
+
+  const BUFFER_MS = 60_000; // consider expired 60s early
+  if (Date.now() < stored.expiryMs - BUFFER_MS) {
+    // Token is still valid
+    currentAccessToken = stored.token;
+  } else if (tokenClient) {
+    // Token is expired — attempt silent re-auth
+    try {
+      await refreshAccessToken();
+    } catch {
+      // Silent refresh failed — leave token null
+      clearPersistedGoogleToken();
+    }
+  }
+}
+
+/**
  * Refresh access token
  */
 export async function refreshAccessToken(): Promise<string> {
@@ -114,19 +143,21 @@ export async function refreshAccessToken(): Promise<string> {
   }
 
   return new Promise((resolve, reject) => {
-    try {
-      tokenClient.requestAccessToken({ prompt: '' });
-
-      setTimeout(() => {
-        if (currentAccessToken) {
-          resolve(currentAccessToken);
-        } else {
-          reject(new Error('Failed to refresh token'));
-        }
-      }, 500);
-    } catch (error) {
-      reject(error);
-    }
+    tokenClient.callback = (response: any) => {
+      if (response.error) {
+        reject(new Error(response.error));
+        return;
+      }
+      if (!response.access_token) {
+        reject(new Error('No access token received'));
+        return;
+      }
+      currentAccessToken = response.access_token;
+      const expiryMs = Date.now() + (response.expires_in ?? 3585) * 1000;
+      persistGoogleToken(response.access_token, expiryMs);
+      resolve(response.access_token);
+    };
+    tokenClient.requestAccessToken({ prompt: '' });
   });
 }
 
@@ -134,7 +165,7 @@ export async function refreshAccessToken(): Promise<string> {
  * Parse ID token to get user info
  * In a real app, you'd verify the signature server-side
  */
-function parseIdToken(): GoogleUser {
+async function parseIdToken(): Promise<GoogleUser> {
   // For this demo, we'll construct user info from the access token response
   // In production, you should decode the ID token JWT
 

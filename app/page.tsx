@@ -13,8 +13,10 @@ import { CommandPalette } from "@/components/journal/command-palette"
 import { SetupModal } from "@/components/journal/setup-modal"
 import { SettingsModal } from "@/components/journal/settings-modal"
 import { useJournalStore, GOOGLE_SYNC_ENABLED, GOOGLE_CONFIG, generateGuestId } from "@/lib/journal-store"
-import { initializeGoogle, setAccessToken } from "@/lib/google/auth"
+import { initializeGoogle, restorePersistedToken, getAccessToken } from "@/lib/google/auth"
 import { debouncedSync, cancelSync } from "@/lib/google/auto-sync"
+import { downloadFromDrive } from "@/lib/google/drive"
+import { toast } from "sonner"
 import {
   setActiveStorageKey,
   clearActiveStorageKey,
@@ -22,6 +24,7 @@ import {
   persistGuestId,
   getPersistedGuestId,
   registerUser,
+  findGuestByName,
 } from "@/lib/storage/zustand-adapter"
 import { cn } from "@/lib/utils"
 
@@ -33,7 +36,7 @@ export default function Home() {
   const [commandOpen, setCommandOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const { settings, toggleSetting, userName, setUserName, authMethod, accessToken, setGoogleUser, setAuthMethod } =
+  const { settings, toggleSetting, userName, setUserName, authMethod, setGoogleUser, setAuthMethod } =
     useJournalStore()
 
   // Mark as mounted and rehydrate store — until this fires,
@@ -65,9 +68,25 @@ export default function Home() {
       if (GOOGLE_SYNC_ENABLED && GOOGLE_CONFIG.clientId) {
         try {
           await initializeGoogle(GOOGLE_CONFIG as { clientId: string; scope: string[] })
-          // Restore access token if it exists
-          if (accessToken) {
-            setAccessToken(accessToken)
+          await restorePersistedToken()
+
+          // Pull Drive data on startup if user is a Google user with sync enabled
+          const store = useJournalStore.getState()
+          if (store.authMethod === 'google' && store.googleDriveSyncEnabled && getAccessToken()) {
+            const driveJson = await downloadFromDrive()
+            if (driveJson) {
+              const driveData = JSON.parse(driveJson)
+              useJournalStore.setState({
+                dailyLogs: driveData.dailyLogs || {},
+                tags: driveData.tags || [],
+                habits: driveData.habits || [],
+                habitCompletions: driveData.habitCompletions || [],
+                collections: driveData.collections || [],
+                userName: driveData.userName || store.userName,
+                settings: driveData.settings || store.settings,
+              })
+              toast.success("Journal synced from Drive")
+            }
           }
         } catch (error) {
           console.error("Failed to initialize Google:", error)
@@ -76,7 +95,7 @@ export default function Home() {
     }
 
     initGoogle()
-  }, [accessToken])
+  }, [])
 
   // Setup auto-sync subscription
   useEffect(() => {
@@ -110,21 +129,33 @@ export default function Home() {
   const handleSetupComplete = async (authMethod: "guest" | "google", name: string, googleData?: any) => {
     if (authMethod === "google" && googleData) {
       const userKey = `bj-google-${googleData.id}`
-      // Set storage key BEFORE store writes for Google users
       setActiveStorageKey(userKey)
+      await useJournalStore.persist.rehydrate()
       setGoogleUser(googleData.id, googleData.email, "", "")
       await registerUser(userKey, name, "google")
     } else {
-      // Guest mode: use persisted ID if this is a returning guest,
-      // otherwise generate a fresh one
-      const existingGuestId = await getPersistedGuestId()
-      const guestId = existingGuestId ?? generateGuestId()
-      const userKey = `bj-guest-${guestId}`
-      setActiveStorageKey(userKey)
-      persistGuestId(guestId) // survives future logouts
-      useJournalStore.setState({ guestId })
-      setAuthMethod("guest")
-      await registerUser(userKey, name, "guest")
+      // Check if a guest with this exact name already exists (returning guest)
+      const existingKey = await findGuestByName(name)
+
+      if (existingKey) {
+        // Returning guest — restore their data
+        const guestId = existingKey.replace("bj-guest-", "")
+        setActiveStorageKey(existingKey)
+        persistGuestId(guestId)
+        await useJournalStore.persist.rehydrate()
+        useJournalStore.setState({ guestId })
+        setAuthMethod("guest")
+      } else {
+        // New guest — fresh identity
+        const guestId = generateGuestId()
+        const userKey = `bj-guest-${guestId}`
+        setActiveStorageKey(userKey)
+        persistGuestId(guestId)
+        await useJournalStore.persist.rehydrate()
+        useJournalStore.setState({ guestId })
+        setAuthMethod("guest")
+        await registerUser(userKey, name, "guest")
+      }
     }
 
     setUserName(name)

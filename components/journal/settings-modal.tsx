@@ -10,7 +10,7 @@ import { Moon, Sun, LogOut } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useJournalStore, GOOGLE_SYNC_ENABLED, GOOGLE_CONFIG } from "@/lib/journal-store"
 import { signInWithGoogle, signOutFromGoogle } from "@/lib/google/auth"
-import { setActiveStorageKey, clearActiveStorageKey, clearPersistedGuestId, registerUser } from "@/lib/storage/zustand-adapter"
+import { setActiveStorageKey, clearActiveStorageKey, clearPersistedGuestId, clearPersistedGoogleToken, registerUser, findGuestByName } from "@/lib/storage/zustand-adapter"
 import { uploadToDrive, getLastSyncTime } from "@/lib/google/drive"
 import {
   checkForConflicts,
@@ -36,6 +36,8 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     resetStore,
     authMethod,
     googleEmail,
+    guestId,
+    googleId,
     setGoogleUser,
     clearGoogleAuth,
     googleDriveSyncEnabled,
@@ -44,6 +46,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     setLastSyncTime,
   } = useJournalStore()
   const [nameInput, setNameInput] = useState(userName)
+  const [nameError, setNameError] = useState("")
   const [isSyncing, setIsSyncing] = useState(false)
   const [lastSync, setLastSync] = useState(lastSyncTime)
 
@@ -66,10 +69,31 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     }
   }, [authMethod, googleDriveSyncEnabled])
 
-  const handleSaveName = () => {
-    if (nameInput.trim()) {
-      setUserName(nameInput.trim())
+  const handleSaveName = async () => {
+    const trimmed = nameInput.trim()
+    setNameError("")
+    if (!trimmed) return
+
+    // For guests: block name change if another guest already owns that name
+    if (authMethod === "guest" && trimmed !== userName) {
+      const currentUserKey = `bj-guest-${guestId}`
+      const existingKey = await findGuestByName(trimmed)
+      if (existingKey && existingKey !== currentUserKey) {
+        setNameError(`A guest named "${trimmed}" already exists`)
+        return
+      }
     }
+
+    setUserName(trimmed)
+
+    // Update the meta store user registry with the new display name
+    const id = authMethod === "guest" ? guestId : googleId
+    if (id) {
+      const userKey = authMethod === "guest" ? `bj-guest-${id}` : `bj-google-${id}`
+      await registerUser(userKey, trimmed, authMethod)
+    }
+
+    toast.success("Name saved!")
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -180,17 +204,20 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
   const handleSignOutGoogle = () => {
     signOutFromGoogle()
+    clearPersistedGoogleToken()
     clearGoogleAuth()
     toast.success("Signed out from Google")
   }
 
   const handleLogout = () => {
-    // Clear storage key first, before clearing any store state
+    // Clear storage key and guest identity first, before clearing any store state
     clearActiveStorageKey()
+    clearPersistedGuestId()
     // Reset all store data to prevent data leak to next user
     resetStore()
     if (authMethod === "google") {
       signOutFromGoogle()
+      clearPersistedGoogleToken()
     }
     onOpenChange(false)
     toast.success("Logged out")
@@ -307,13 +334,18 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               type="text"
               placeholder="Enter your name..."
               value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
+              onChange={(e) => {
+                setNameInput(e.target.value)
+                setNameError("")
+              }}
               onKeyDown={handleKeyDown}
               className="font-serif text-base"
+              aria-invalid={!!nameError}
             />
+            {nameError && <div className="text-sm text-destructive">{nameError}</div>}
             <Button
               onClick={handleSaveName}
-              disabled={!nameInput.trim() || nameInput === userName}
+              disabled={!nameInput.trim() || nameInput === userName || !!nameError}
               variant="outline"
               size="sm"
             >

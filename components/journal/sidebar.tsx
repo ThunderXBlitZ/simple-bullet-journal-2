@@ -45,12 +45,14 @@ const navItems: { id: View; label: string; icon: React.ReactNode }[] = [
 
 export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettings, className }: SidebarProps) {
   const { theme, setTheme } = useTheme()
-  const { settings, toggleSetting, setZoom, collections } = useJournalStore()
+  const { settings, toggleSetting, setZoom, collections, userName } = useJournalStore()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [currentMonth, setCurrentMonth] = useState("")
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     setCurrentMonth(format(new Date(), "MMMM yyyy"))
+    setIsMounted(true)
   }, [])
 
   const toggleTheme = () => {
@@ -72,7 +74,7 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         {!isCollapsed && (
           <h1 className="font-serif text-lg font-semibold text-sidebar-foreground">
-            {useJournalStore().userName}'s Bullet Journal
+            {userName}'s Bullet Journal
           </h1>
         )}
         <Button
@@ -139,14 +141,16 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
           {!isCollapsed && <span className="font-serif">Focus Mode</span>}
         </Button>
 
-        <Button
-          variant="ghost"
-          className={cn("w-full justify-start gap-3 text-sidebar-foreground text-sm", isCollapsed && "justify-center")}
-          onClick={toggleTheme}
-        >
-          {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          {!isCollapsed && <span className="font-serif">{theme === "dark" ? "Light" : "Dark"}</span>}
-        </Button>
+        {isMounted && (
+          <Button
+            variant="ghost"
+            className={cn("w-full justify-start gap-3 text-sidebar-foreground text-sm", isCollapsed && "justify-center")}
+            onClick={toggleTheme}
+          >
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {!isCollapsed && <span className="font-serif">{theme === "dark" ? "Light" : "Dark"}</span>}
+          </Button>
+        )}
 
         <Button
           variant="ghost"
