@@ -9,10 +9,8 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "@/components/ui/command"
-import { CalendarDays, CalendarRange, CheckSquare, List, Search, Moon, Sun, Maximize2, Minimize2, Plus, Minus } from "lucide-react"
-import { useTheme } from "next-themes"
+import { Search } from "lucide-react"
 import { useJournalStore } from "@/lib/journal-store"
 
 interface CommandPaletteProps {
@@ -22,8 +20,7 @@ interface CommandPaletteProps {
 }
 
 export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPaletteProps) {
-  const { theme, setTheme } = useTheme()
-  const { dailyLogs, habits, collections, settings, toggleSetting, setZoom } = useJournalStore()
+  const { dailyLogs } = useJournalStore()
   const [search, setSearch] = useState("")
 
   // Search results from entries
@@ -51,7 +48,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPalett
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput
-        placeholder="Search entries, navigate, or run commands..."
+        placeholder="Search your journal..."
         value={search}
         onValueChange={setSearch}
       />
@@ -80,112 +77,6 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPalett
           </CommandGroup>
         )}
 
-        <CommandGroup heading="Navigate">
-          <CommandItem
-            onSelect={() => {
-              onNavigate("daily")
-              onOpenChange(false)
-            }}
-          >
-            <CalendarDays className="mr-2 h-4 w-4" />
-            Daily Log
-          </CommandItem>
-          <CommandItem
-            onSelect={() => {
-              onNavigate("weekly")
-              onOpenChange(false)
-            }}
-          >
-            <CalendarRange className="mr-2 h-4 w-4" />
-            Weekly View
-          </CommandItem>
-          <CommandItem
-            onSelect={() => {
-              onNavigate("monthly")
-              onOpenChange(false)
-            }}
-          >
-            <CalendarDays className="mr-2 h-4 w-4" />
-            Monthly View
-          </CommandItem>
-          <CommandItem
-            onSelect={() => {
-              onNavigate("habits")
-              onOpenChange(false)
-            }}
-          >
-            <CheckSquare className="mr-2 h-4 w-4" />
-            Habit Tracker
-          </CommandItem>
-          <CommandItem
-            onSelect={() => {
-              onNavigate("collections")
-              onOpenChange(false)
-            }}
-          >
-            <List className="mr-2 h-4 w-4" />
-            Collections
-          </CommandItem>
-        </CommandGroup>
-
-        {collections.length > 0 && (
-          <CommandGroup heading="Collections">
-            {collections.map((collection) => (
-              <CommandItem
-                key={collection.id}
-                onSelect={() => {
-                  onNavigate("collections")
-                  onOpenChange(false)
-                }}
-              >
-                <span className="mr-2">{collection.icon}</span>
-                {collection.name}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
-
-        <CommandSeparator />
-
-        <CommandGroup heading="Actions">
-          <CommandItem
-            onSelect={() => {
-              setTheme(theme === "dark" ? "light" : "dark")
-              onOpenChange(false)
-            }}
-          >
-            {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-            Toggle {theme === "dark" ? "Light" : "Dark"} Mode
-          </CommandItem>
-          <CommandItem
-            onSelect={() => {
-              toggleSetting("focusMode")
-              onOpenChange(false)
-            }}
-          >
-            {settings.focusMode ? <Minimize2 className="mr-2 h-4 w-4" /> : <Maximize2 className="mr-2 h-4 w-4" />}
-            Toggle Focus Mode
-          </CommandItem>
-
-          <CommandSeparator />
-
-          <CommandItem
-            onSelect={() => {
-              setZoom(settings.zoomLevel - 0.1)
-            }}
-          >
-            <Minus className="mr-2 h-4 w-4" />
-            Zoom Out ({Math.round(settings.zoomLevel * 100)}%)
-          </CommandItem>
-          <CommandItem
-            onSelect={() => {
-              setZoom(settings.zoomLevel + 0.1)
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Zoom In ({Math.round(settings.zoomLevel * 100)}%)
-          </CommandItem>
-        </CommandGroup>
       </CommandList>
     </CommandDialog>
   )

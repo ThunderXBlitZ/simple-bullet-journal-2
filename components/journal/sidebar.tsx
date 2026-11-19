@@ -14,10 +14,6 @@ import {
   Menu,
   ChevronLeft,
   Command,
-  Maximize2,
-  Minimize2,
-  Plus,
-  Minus,
   Settings,
 } from "lucide-react"
 import { useTheme } from "next-themes"
@@ -45,7 +41,7 @@ const navItems: { id: View; label: string; icon: React.ReactNode }[] = [
 
 export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettings, className }: SidebarProps) {
   const { theme, setTheme } = useTheme()
-  const { settings, toggleSetting, setZoom, collections, userName } = useJournalStore()
+  const { collections, userName } = useJournalStore()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [currentMonth, setCurrentMonth] = useState("")
   const [isMounted, setIsMounted] = useState(false)
@@ -58,9 +54,6 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark")
   }
-
-  const zoomIn = () => setZoom(settings.zoomLevel + 0.1)
-  const zoomOut = () => setZoom(settings.zoomLevel - 0.1)
 
   return (
     <aside
@@ -132,15 +125,6 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
           )}
         </Button>
 
-        <Button
-          variant="ghost"
-          className={cn("w-full justify-start gap-3 text-sidebar-foreground text-sm", isCollapsed && "justify-center")}
-          onClick={() => toggleSetting("focusMode")}
-        >
-          {settings.focusMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          {!isCollapsed && <span className="font-serif">Focus Mode</span>}
-        </Button>
-
         {isMounted && (
           <Button
             variant="ghost"
@@ -161,32 +145,6 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
           {!isCollapsed && <span className="font-serif">Settings</span>}
         </Button>
 
-        {/* Zoom Controls */}
-        <div className={cn("flex gap-1", isCollapsed ? "flex-col items-center" : " justify-center gap-1")}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-sidebar-foreground"
-            onClick={zoomOut}
-            title="Zoom Out"
-          >
-            <Minus className="w-4 h-4" />
-          </Button>
-          {!isCollapsed && (
-            <div className="flex items-center justify-center text-xs text-sidebar-foreground">
-              {Math.round(settings.zoomLevel * 100)}%
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-sidebar-foreground"
-            onClick={zoomIn}
-            title="Zoom In"
-          >
-            <Plus className="w-4 h-4" />
-          </Button>
-        </div>
       </div>
 
       {/* Date */}

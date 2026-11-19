@@ -150,7 +150,12 @@ export default function Home() {
 
       {/* Mobile Navigation */}
       {!settings.focusMode && (
-        <MobileNav currentView={currentView} onViewChange={setCurrentView} onOpenCommand={() => setCommandOpen(true)} />
+        <MobileNav
+          currentView={currentView}
+          onViewChange={setCurrentView}
+          onOpenCommand={() => setCommandOpen(true)}
+          onOpenSettings={() => setSettingsOpen(true)}
+        />
       )}
 
       {/* Command Palette */}

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Moon, Sun, LogOut } from "lucide-react"
+import { LogOut, Maximize2, Minus, Minimize2, Moon, Plus, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useJournalStore } from "@/lib/journal-store"
 import { googleAuth } from "@/lib/google/auth"
@@ -20,7 +20,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const { theme, setTheme } = useTheme()
-  const { userName, setUserName, resetStore } = useJournalStore()
+  const { userName, setUserName, resetStore, settings, toggleSetting, setZoom } = useJournalStore()
   const [nameInput, setNameInput] = useState(userName)
 
   useEffect(() => {
@@ -72,6 +72,44 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             >
               Save Name
             </Button>
+          </div>
+
+          <Separator />
+
+          {/* Journal display */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium font-serif">Journal Display</label>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => toggleSetting("focusMode")}
+              className="w-full justify-start gap-2"
+            >
+              {settings.focusMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              {settings.focusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
+            </Button>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Zoom</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setZoom(settings.zoomLevel - 0.1)}
+                  aria-label="Zoom out"
+                >
+                  <Minus className="w-4 h-4" />
+                </Button>
+                <span className="w-12 text-center text-sm">{Math.round(settings.zoomLevel * 100)}%</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setZoom(settings.zoomLevel + 0.1)}
+                  aria-label="Zoom in"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
 
           <Separator />
