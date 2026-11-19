@@ -1,13 +1,14 @@
 /**
  * Google Drive Sync Module
- * Handles uploading/downloading data to/from Google Drive appDataFolder
+ * Dumb transport: read/write one file in the appDataFolder with a version check.
  */
 
-import { getAccessToken, refreshAccessToken } from './auth';
+import { getAccessToken, refreshAccessToken } from "./auth"
 
-const MIME_TYPE = 'application/json';
-const FILE_NAME = 'bullet-journal-backup.json';
-const FOLDER_NAME = 'appDataFolder';
+const MIME_TYPE = "application/json"
+const FILE_NAME = "bullet-journal.json"
+const LEGACY_FILE_NAME = "bullet-journal-backup.json"
+const FOLDER_NAME = "appDataFolder"
 
 /**
  * Error types for sync operations
@@ -165,164 +166,89 @@ async function withRetry<T>(
   throw lastError
 }
 
-/**
- * Upload data to Google Drive appDataFolder
- */
-export async function uploadToDrive(data: string): Promise<void> {
-  const token = getAccessToken();
-  if (!token) {
-    throw new SyncError(SyncErrorType.AUTH_EXPIRED, "Not authenticated with Google");
-  }
+export interface RemoteFile {
+  text: string | null
+  fileId: string | null // id of the *new-format* file (null if absent or only legacy exists)
+  version: string | null
+  legacy: boolean // true when text came from the legacy snapshot file
+}
 
-  await withRetry(async () => {
-    // Find existing file
-    const existingFileId = await findBackupFile(token);
+/** Token is read per attempt, so a refresh inside withRetry is actually used. */
+function authHeaders(): Record<string, string> {
+  const token = getAccessToken()
+  if (!token) throw new SyncError(SyncErrorType.AUTH_EXPIRED, "Not authenticated with Google")
+  return { Authorization: `Bearer ${token}` }
+}
 
-    if (existingFileId) {
-      // Update existing file
-      await updateFile(existingFileId, data, token);
-    } else {
-      // Create new file
-      await createFile(data, token);
-    }
-  });
+async function findFile(name: string): Promise<{ id: string; version: string } | null> {
+  const q = encodeURIComponent(`name='${name}'`)
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&orderBy=createdTime&pageSize=1&fields=files(id,version)`,
+    { headers: authHeaders() },
+  )
+  const error = classifyResponse(res)
+  if (error) throw error
+  const f = (await res.json()).files?.[0]
+  return f ? { id: f.id, version: String(f.version) } : null
+}
+
+async function readContent(id: string): Promise<string> {
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, { headers: authHeaders() })
+  const error = classifyResponse(res)
+  if (error) throw error
+  return res.text()
+}
+
+/** Reads the sync file (falls back to the legacy snapshot, read-only). Version is read *before* content. */
+export async function readSyncFile(): Promise<RemoteFile> {
+  return withRetry(async () => {
+    const current = await findFile(FILE_NAME)
+    if (current) return { text: await readContent(current.id), fileId: current.id, version: current.version, legacy: false }
+    const legacy = await findFile(LEGACY_FILE_NAME)
+    if (legacy) return { text: await readContent(legacy.id), fileId: null, version: null, legacy: true }
+    return { text: null, fileId: null, version: null, legacy: false }
+  })
+}
+
+async function createFile(text: string): Promise<void> {
+  const form = new FormData()
+  form.append("metadata", new Blob([JSON.stringify({ name: FILE_NAME, mimeType: MIME_TYPE, parents: [FOLDER_NAME] })], { type: "application/json" }))
+  form.append("file", new Blob([text], { type: MIME_TYPE }))
+  const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+    method: "POST",
+    headers: authHeaders(),
+    body: form,
+  })
+  const error = classifyResponse(res)
+  if (error) throw error
 }
 
 /**
- * Download data from Google Drive appDataFolder
+ * Writes the sync file. Returns "conflict" (nothing written) if the remote changed since it was read,
+ * so the caller re-pulls and re-merges. Version check is a narrow window, not a lock; merge makes it safe.
  */
-export async function downloadFromDrive(): Promise<string | null> {
-  const token = getAccessToken();
-  if (!token) {
-    throw new SyncError(SyncErrorType.AUTH_EXPIRED, "Not authenticated with Google");
-  }
-
-  return await withRetry(async () => {
-    const fileId = await findBackupFile(token);
-    if (!fileId) {
-      return null; // No backup exists yet
+export async function writeSyncFile(
+  text: string,
+  expect: { fileId: string | null; version: string | null },
+): Promise<"ok" | "conflict"> {
+  return withRetry(async () => {
+    if (!expect.fileId) {
+      await createFile(text)
+      return "ok" as const
     }
+    const meta = await fetch(`https://www.googleapis.com/drive/v3/files/${expect.fileId}?fields=version`, { headers: authHeaders() })
+    if (meta.status === 404) return "conflict" as const // file vanished → re-pull will recreate
+    const metaError = classifyResponse(meta)
+    if (metaError) throw metaError
+    if (String((await meta.json()).version) !== expect.version) return "conflict" as const
 
-    const response = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    const error = classifyResponse(response);
-    if (error) throw error;
-
-    return await response.text();
-  });
-}
-
-/**
- * Find backup file in appDataFolder
- */
-async function findBackupFile(token: string): Promise<string | null> {
-  const response = await fetch(
-    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${FILE_NAME}'&pageSize=1`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  const error = classifyResponse(response);
-  if (error) throw error;
-
-  const data = await response.json();
-  return data.files?.[0]?.id || null;
-}
-
-/**
- * Create new backup file in appDataFolder
- */
-async function createFile(data: string, token: string): Promise<void> {
-  const metadata = {
-    name: FILE_NAME,
-    mimeType: MIME_TYPE,
-    parents: [FOLDER_NAME],
-  };
-
-  const form = new FormData();
-  form.append(
-    'metadata',
-    new Blob([JSON.stringify(metadata)], { type: 'application/json' })
-  );
-  form.append('file', new Blob([data], { type: MIME_TYPE }));
-
-  const response = await fetch(
-    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: form,
-    }
-  );
-
-  const error = classifyResponse(response);
-  if (error) throw error;
-}
-
-/**
- * Update existing backup file in appDataFolder
- */
-async function updateFile(fileId: string, data: string, token: string): Promise<void> {
-  const response = await fetch(
-    `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
-    {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': MIME_TYPE,
-      },
-      body: data,
-    }
-  );
-
-  const error = classifyResponse(response);
-  if (error) throw error;
-}
-
-/**
- * Get last sync timestamp from Drive file metadata
- */
-export async function getLastSyncTime(): Promise<Date | null> {
-  const token = getAccessToken();
-  if (!token) {
-    return null;
-  }
-
-  try {
-    return await withRetry(async () => {
-      const fileId = await findBackupFile(token);
-      if (!fileId) {
-        return null;
-      }
-
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${fileId}?fields=modifiedTime&supportsAllDrives=true`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const error = classifyResponse(response);
-      if (error) throw error;
-
-      const data = await response.json();
-      return data.modifiedTime ? new Date(data.modifiedTime) : null;
-    });
-  } catch {
-    return null;
-  }
+    const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${expect.fileId}?uploadType=media`, {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": MIME_TYPE },
+      body: text,
+    })
+    const error = classifyResponse(res)
+    if (error) throw error
+    return "ok" as const
+  })
 }

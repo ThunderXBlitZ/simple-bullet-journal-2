@@ -14,44 +14,16 @@ import type {
   Tag,
 } from "./types"
 import { createZustandStorage } from "./storage/zustand-adapter"
-import { tagPresets } from "./tag-presets"
-
-// Feature flag for Google Sign-In and Drive Sync
-export const GOOGLE_SYNC_ENABLED = true
-
-// Google OAuth Configuration
-export const GOOGLE_CONFIG = {
-  clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-  scope: [
-    "https://www.googleapis.com/auth/userinfo.profile",
-    "https://www.googleapis.com/auth/userinfo.email",
-    "https://www.googleapis.com/auth/drive.appdata",
-  ],
-}
-
-const generateId = () => Math.random().toString(36).substring(2, 15)
-
-/**
- * Generate a unique ID for guest users
- * Uses crypto.randomUUID if available, falls back to Math.random
- */
-const generateGuestId = (): string => {
-  if (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID) {
-    return window.crypto.randomUUID()
-  }
-  // Fallback for environments without crypto.randomUUID
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-}
-
-const getToday = () => new Date().toISOString().split("T")[0]
-
-const initializePresetTags = (): Tag[] => {
-  return tagPresets.map((preset) => ({
-    ...preset,
-    id: generateId(),
-    createdAt: new Date().toISOString(),
-  }))
-}
+import {
+  newId,
+  nowIso,
+  nextOrder,
+  addTombstones,
+  moveItem,
+  reindex,
+  calcStreak,
+  initializePresetTags,
+} from "./journal-helpers"
 
 interface JournalStore extends JournalState {
   // Daily Log Actions
@@ -95,44 +67,31 @@ interface JournalStore extends JournalState {
   setUserName: (name: string) => void
   resetStore: () => void
 
-  // Auth & Google Sync Actions
-  setAuthMethod: (method: "guest" | "google") => void
-  setGuestId: (id: string) => void
-  setGoogleUser: (googleId: string, email: string, accessToken: string, refreshToken?: string) => void
-  clearGoogleAuth: () => void
-  setGoogleDriveSyncEnabled: (enabled: boolean) => void
-  setLastSyncTime: (time: string | null) => void
-  getSyncStatus: () => "not_configured" | "configured" | "syncing"
+  // Sync
+  setLinkedAccount: (accountId: string | null, email: string | null) => void
+  resetJournalData: () => void
 }
 
 const statusCycle: BulletStatus[] = ["open", "complete", "migrated", "scheduled", "irrelevant"]
 
+const initialState = () => ({
+  dailyLogs: {},
+  tags: initializePresetTags(),
+  habits: [],
+  habitCompletions: [],
+  collections: [],
+  userName: "",
+  userNameUpdatedAt: "1970-01-01T00:00:00.000Z",
+  tombstones: {},
+  settings: { showDots: true, showLines: false, focusMode: false, zoomLevel: 1 },
+  googleEmail: null as string | null,
+  syncAccountId: null as string | null,
+})
+
 export const useJournalStore = create<JournalStore>()(
   persist(
     (set, get) => ({
-      dailyLogs: {},
-      tags: initializePresetTags(),
-      habits: [],
-      habitCompletions: [],
-      collections: [],
-      userName: "",
-      settings: {
-        showDots: true,
-        showLines: false,
-        focusMode: false,
-        zoomLevel: 1,
-      },
-
-      // Auth state
-      authMethod: "guest" as "guest" | "google",
-      guestId: null as string | null,
-      googleId: null as string | null,
-      googleEmail: null as string | null,
-      accessToken: null as string | null,
-      refreshToken: null as string | null,
-      googleDriveSyncEnabled: false,
-      lastSyncTime: null as string | null,
-      isSyncing: false,
+      ...initialState(),
 
       getDailyLog: (date: string) => {
         const { dailyLogs } = get()
@@ -140,30 +99,14 @@ export const useJournalStore = create<JournalStore>()(
       },
 
       addEntry: (date, type, content, indent = 0, tagIds = [], title) => {
-        const now = new Date().toISOString()
-        const newEntry: BulletEntry = {
-          id: generateId(),
-          type,
-          status: type === "task" ? "open" : "complete",
-          title,
-          content,
-          indent,
-          tagIds: tagIds.length > 0 ? tagIds : undefined,
-          createdAt: now,
-          updatedAt: now,
-        }
-
+        const now = nowIso()
         set((state) => {
-          const existingLog = state.dailyLogs[date] || { date, entries: [] }
-          return {
-            dailyLogs: {
-              ...state.dailyLogs,
-              [date]: {
-                ...existingLog,
-                entries: [...existingLog.entries, newEntry],
-              },
-            },
+          const log = state.dailyLogs[date] || { date, entries: [] }
+          const entry: BulletEntry = {
+            id: newId(), type, status: type === "task" ? "open" : "complete", title, content, indent,
+            tagIds: tagIds.length > 0 ? tagIds : undefined, order: nextOrder(log.entries), createdAt: now, updatedAt: now,
           }
+          return { dailyLogs: { ...state.dailyLogs, [date]: { ...log, entries: [...log.entries, entry] } } }
         })
       },
 
@@ -171,14 +114,13 @@ export const useJournalStore = create<JournalStore>()(
         set((state) => {
           const log = state.dailyLogs[date]
           if (!log) return state
-
           return {
             dailyLogs: {
               ...state.dailyLogs,
               [date]: {
                 ...log,
                 entries: log.entries.map((e) =>
-                  e.id === entryId ? { ...e, ...updates, updatedAt: new Date().toISOString() } : e,
+                  e.id === entryId ? { ...e, ...updates, updatedAt: nowIso() } : e,
                 ),
               },
             },
@@ -190,15 +132,9 @@ export const useJournalStore = create<JournalStore>()(
         set((state) => {
           const log = state.dailyLogs[date]
           if (!log) return state
-
           return {
-            dailyLogs: {
-              ...state.dailyLogs,
-              [date]: {
-                ...log,
-                entries: log.entries.filter((e) => e.id !== entryId),
-              },
-            },
+            dailyLogs: { ...state.dailyLogs, [date]: { ...log, entries: log.entries.filter((e) => e.id !== entryId) } },
+            tombstones: addTombstones(state.tombstones, [entryId]),
           }
         })
       },
@@ -207,7 +143,6 @@ export const useJournalStore = create<JournalStore>()(
         set((state) => {
           const log = state.dailyLogs[date]
           if (!log) return state
-
           return {
             dailyLogs: {
               ...state.dailyLogs,
@@ -217,7 +152,7 @@ export const useJournalStore = create<JournalStore>()(
                   if (e.id !== entryId) return e
                   const currentIndex = statusCycle.indexOf(e.status)
                   const nextStatus = statusCycle[(currentIndex + 1) % statusCycle.length]
-                  return { ...e, status: nextStatus, updatedAt: new Date().toISOString() }
+                  return { ...e, status: nextStatus, updatedAt: nowIso() }
                 }),
               },
             },
@@ -226,40 +161,32 @@ export const useJournalStore = create<JournalStore>()(
       },
 
       addTag: (name, color) => {
-        const newTag: Tag = {
-          id: generateId(),
-          name,
-          color,
-          createdAt: new Date().toISOString(),
-        }
+        const now = nowIso()
         set((state) => ({
-          tags: [...state.tags, newTag],
+          tags: [...state.tags, { id: newId(), name, color, createdAt: now, updatedAt: now }],
         }))
       },
 
       deleteTag: (tagId) => {
-        set((state) => ({
-          tags: state.tags.filter((t) => t.id !== tagId),
-          dailyLogs: Object.fromEntries(
-            Object.entries(state.dailyLogs).map(([date, log]) => [
-              date,
-              {
-                ...log,
-                entries: log.entries.map((e) => ({
-                  ...e,
-                  tagIds: e.tagIds?.filter((id) => id !== tagId),
-                })),
-              },
-            ])
-          ),
-        }))
+        set((state) => {
+          const at = nowIso()
+          return {
+            tags: state.tags.filter((t) => t.id !== tagId),
+            tombstones: addTombstones(state.tombstones, [tagId]),
+            dailyLogs: Object.fromEntries(
+              Object.entries(state.dailyLogs).map(([date, log]) => [
+                date,
+                { ...log, entries: log.entries.map((e) => (e.tagIds?.includes(tagId) ? { ...e, tagIds: e.tagIds.filter((id) => id !== tagId), updatedAt: at } : e)) },
+              ]),
+            ),
+          }
+        })
       },
 
       addTagToEntry: (date, entryId, tagId) => {
         set((state) => {
           const log = state.dailyLogs[date]
           if (!log) return state
-
           return {
             dailyLogs: {
               ...state.dailyLogs,
@@ -267,7 +194,7 @@ export const useJournalStore = create<JournalStore>()(
                 ...log,
                 entries: log.entries.map((e) =>
                   e.id === entryId
-                    ? { ...e, tagIds: [...(e.tagIds || []), tagId] }
+                    ? { ...e, tagIds: [...(e.tagIds || []), tagId], updatedAt: nowIso() }
                     : e
                 ),
               },
@@ -280,7 +207,6 @@ export const useJournalStore = create<JournalStore>()(
         set((state) => {
           const log = state.dailyLogs[date]
           if (!log) return state
-
           return {
             dailyLogs: {
               ...state.dailyLogs,
@@ -288,7 +214,7 @@ export const useJournalStore = create<JournalStore>()(
                 ...log,
                 entries: log.entries.map((e) =>
                   e.id === entryId
-                    ? { ...e, tagIds: e.tagIds?.filter((id) => id !== tagId) }
+                    ? { ...e, tagIds: e.tagIds?.filter((id) => id !== tagId), updatedAt: nowIso() }
                     : e
                 ),
               },
@@ -303,97 +229,62 @@ export const useJournalStore = create<JournalStore>()(
       },
 
       addHabit: (name, icon, color) => {
-        const newHabit: Habit = {
-          id: generateId(),
-          name,
-          icon,
-          color,
-          createdAt: new Date().toISOString(),
-        }
-        set((state) => ({ habits: [...state.habits, newHabit] }))
+        const now = nowIso()
+        set((state) => ({
+          habits: [...state.habits, { id: newId(), name, icon, color, order: nextOrder(state.habits), createdAt: now, updatedAt: now }],
+        }))
       },
 
       deleteHabit: (habitId) => {
         set((state) => ({
           habits: state.habits.filter((h) => h.id !== habitId),
           habitCompletions: state.habitCompletions.filter((c) => c.habitId !== habitId),
+          tombstones: addTombstones(state.tombstones, [habitId]),
         }))
       },
 
       toggleHabitCompletion: (habitId, date) => {
         set((state) => {
+          const updatedAt = nowIso()
           const existing = state.habitCompletions.find((c) => c.habitId === habitId && c.date === date)
-
-          if (existing) {
-            return {
-              habitCompletions: state.habitCompletions.map((c) =>
-                c.habitId === habitId && c.date === date ? { ...c, completed: !c.completed } : c,
-              ),
-            }
-          }
-
           return {
-            habitCompletions: [...state.habitCompletions, { habitId, date, completed: true }],
+            habitCompletions: existing
+              ? state.habitCompletions.map((c) => (c === existing ? { ...c, completed: !c.completed, updatedAt } : c))
+              : [...state.habitCompletions, { habitId, date, completed: true, updatedAt }],
           }
         })
       },
 
-      getHabitStreak: (habitId) => {
-        const { habitCompletions } = get()
-        const completions = habitCompletions
-          .filter((c) => c.habitId === habitId && c.completed)
-          .map((c) => c.date)
-          .sort()
-          .reverse()
-
-        if (completions.length === 0) return 0
-
-        let streak = 0
-        const today = new Date()
-
-        for (let i = 0; i < 365; i++) {
-          const checkDate = new Date(today)
-          checkDate.setDate(today.getDate() - i)
-          const dateStr = checkDate.toISOString().split("T")[0]
-
-          if (completions.includes(dateStr)) {
-            streak++
-          } else if (i > 0) {
-            break
-          }
-        }
-
-        return streak
-      },
+      getHabitStreak: (habitId) => calcStreak(get().habitCompletions, habitId),
 
       addCollection: (name, icon) => {
-        const newCollection: Collection = {
-          id: generateId(),
-          name,
-          icon,
-          items: [],
-          createdAt: new Date().toISOString(),
-        }
-        set((state) => ({ collections: [...state.collections, newCollection] }))
-      },
-
-      deleteCollection: (collectionId) => {
+        const now = nowIso()
         set((state) => ({
-          collections: state.collections.filter((c) => c.id !== collectionId),
+          collections: [...state.collections, { id: newId(), name, icon, items: [], createdAt: now, updatedAt: now }],
         }))
       },
 
-      addCollectionItem: (collectionId, content) => {
-        const newItem: CollectionItem = {
-          id: generateId(),
-          content,
-          completed: false,
-          createdAt: new Date().toISOString(),
-        }
+      deleteCollection: (collectionId) => {
+        set((state) => {
+          const col = state.collections.find((c) => c.id === collectionId)
+          return {
+            collections: state.collections.filter((c) => c.id !== collectionId),
+            tombstones: addTombstones(state.tombstones, [collectionId, ...(col?.items.map((i) => i.id) ?? [])]),
+          }
+        })
+      },
 
+      addCollectionItem: (collectionId, content) => {
+        const now = nowIso()
         set((state) => ({
           collections: state.collections.map((c) =>
-            c.id === collectionId ? { ...c, items: [...c.items, newItem] } : c,
+            c.id === collectionId
+              ? {
+                  ...c,
+                  items: [...c.items, { id: newId(), content, completed: false, order: nextOrder(c.items), createdAt: now, updatedAt: now }],
+                  updatedAt: now,
+                }
+              : c,
           ),
         }))
       },
@@ -404,7 +295,7 @@ export const useJournalStore = create<JournalStore>()(
             c.id === collectionId
               ? {
                   ...c,
-                  items: c.items.map((i) => (i.id === itemId ? { ...i, completed: !i.completed } : i)),
+                  items: c.items.map((i) => (i.id === itemId ? { ...i, completed: !i.completed, updatedAt: nowIso() } : i)),
                 }
               : c,
           ),
@@ -413,10 +304,18 @@ export const useJournalStore = create<JournalStore>()(
 
       deleteCollectionItem: (collectionId, itemId) => {
         set((state) => ({
-          collections: state.collections.map((c) =>
-            c.id === collectionId ? { ...c, items: c.items.filter((i) => i.id !== itemId) } : c,
-          ),
+          collections: state.collections.map((c) => (c.id === collectionId ? { ...c, items: c.items.filter((i) => i.id !== itemId) } : c)),
+          tombstones: addTombstones(state.tombstones, [itemId]),
         }))
+      },
+
+      reorderCollectionItems: (collectionId, fromIndex, toIndex) => {
+        set((state) => {
+          const col = state.collections.find((c) => c.id === collectionId)
+          if (!col || fromIndex === toIndex) return state
+          const items = reindex(moveItem(col.items, fromIndex, toIndex))
+          return { collections: state.collections.map((c) => (c.id === collectionId ? { ...c, items } : c)) }
+        })
       },
 
       migrateIncompleteTasks: (fromDate, toDate) => {
@@ -425,15 +324,15 @@ export const useJournalStore = create<JournalStore>()(
           if (!fromLog) return state
 
           const incompleteTasks = fromLog.entries.filter((e) => e.type === "task" && e.status === "open")
-
           if (incompleteTasks.length === 0) return state
 
           const toLog = state.dailyLogs[toDate] || { date: toDate, entries: [] }
-          const now = new Date().toISOString()
+          const now = nowIso()
 
-          const migratedEntries = incompleteTasks.map((e) => ({
+          const migratedEntries = incompleteTasks.map((e, i) => ({
             ...e,
-            id: generateId(),
+            id: newId(),
+            order: nextOrder(toLog.entries) + i,
             createdAt: now,
             updatedAt: now,
           }))
@@ -444,7 +343,7 @@ export const useJournalStore = create<JournalStore>()(
               [fromDate]: {
                 ...fromLog,
                 entries: fromLog.entries.map((e) =>
-                  incompleteTasks.find((t) => t.id === e.id) ? { ...e, status: "migrated" as BulletStatus } : e,
+                  incompleteTasks.find((t) => t.id === e.id) ? { ...e, status: "migrated" as BulletStatus, updatedAt: now } : e,
                 ),
               },
               [toDate]: {
@@ -460,45 +359,12 @@ export const useJournalStore = create<JournalStore>()(
         set((state) => {
           const log = state.dailyLogs[date]
           if (!log || fromIndex === toIndex) return state
-
-          const entries = [...log.entries]
-          const [movedEntry] = entries.splice(fromIndex, 1)
-          entries.splice(toIndex, 0, movedEntry)
-
-          return {
-            dailyLogs: {
-              ...state.dailyLogs,
-              [date]: { ...log, entries },
-            },
-          }
+          return { dailyLogs: { ...state.dailyLogs, [date]: { ...log, entries: reindex(moveItem(log.entries, fromIndex, toIndex)) } } }
         })
       },
 
       reorderHabits: (fromIndex, toIndex) => {
-        set((state) => {
-          if (fromIndex === toIndex) return state
-
-          const habits = [...state.habits]
-          const [movedHabit] = habits.splice(fromIndex, 1)
-          habits.splice(toIndex, 0, movedHabit)
-
-          return { habits }
-        })
-      },
-
-      reorderCollectionItems: (collectionId, fromIndex, toIndex) => {
-        set((state) => {
-          const collection = state.collections.find((c) => c.id === collectionId)
-          if (!collection || fromIndex === toIndex) return state
-
-          const items = [...collection.items]
-          const [movedItem] = items.splice(fromIndex, 1)
-          items.splice(toIndex, 0, movedItem)
-
-          return {
-            collections: state.collections.map((c) => (c.id === collectionId ? { ...c, items } : c)),
-          }
-        })
+        set((state) => (fromIndex === toIndex ? state : { habits: reindex(moveItem(state.habits, fromIndex, toIndex)) }))
       },
 
       toggleSetting: (setting) => {
@@ -519,11 +385,13 @@ export const useJournalStore = create<JournalStore>()(
         }))
       },
 
-      setUserName: (name) => {
-        set({ userName: name.trim() })
-      },
+      setUserName: (name) => set({ userName: name.trim(), userNameUpdatedAt: nowIso() }),
 
-      resetStore: () => {
+      resetStore: () => set(initialState()),
+
+      setLinkedAccount: (accountId, email) => set({ syncAccountId: accountId, googleEmail: email }),
+
+      resetJournalData: () =>
         set({
           dailyLogs: {},
           tags: initializePresetTags(),
@@ -531,77 +399,15 @@ export const useJournalStore = create<JournalStore>()(
           habitCompletions: [],
           collections: [],
           userName: "",
-          settings: {
-            showDots: true,
-            showLines: false,
-            focusMode: false,
-            zoomLevel: 1,
-          },
-          authMethod: "guest",
-          guestId: null,
-          googleId: null,
-          googleEmail: null,
-          accessToken: null,
-          refreshToken: null,
-          googleDriveSyncEnabled: false,
-          lastSyncTime: null,
-          isSyncing: false,
-        })
-      },
-
-      // Auth Actions
-      setAuthMethod: (method) => {
-        set({ authMethod: method })
-      },
-
-      setGuestId: (id) => {
-        set({ guestId: id })
-      },
-
-      setGoogleUser: (googleId, email, accessToken, refreshToken) => {
-        set({
-          googleId,
-          googleEmail: email,
-          accessToken,
-          refreshToken: refreshToken || null,
-          authMethod: "google",
-        })
-      },
-
-      clearGoogleAuth: () => {
-        set({
-          authMethod: "guest",
-          googleId: null,
-          googleEmail: null,
-          accessToken: null,
-          refreshToken: null,
-          googleDriveSyncEnabled: false,
-          lastSyncTime: null,
-          isSyncing: false,
-        })
-      },
-
-      setGoogleDriveSyncEnabled: (enabled) => {
-        set({ googleDriveSyncEnabled: enabled })
-      },
-
-      setLastSyncTime: (time) => {
-        set({ lastSyncTime: time })
-      },
-
-      getSyncStatus: () => {
-        const { authMethod, googleId, isSyncing } = get()
-        if (isSyncing) return "syncing"
-        if (authMethod === "google" && googleId) return "configured"
-        return "not_configured"
-      },
+          userNameUpdatedAt: "1970-01-01T00:00:00.000Z",
+          tombstones: {},
+        }),
     }),
     {
-      name: "bullet-journal-storage",
+      name: "bj-journal",
+      version: 2,
       storage: createZustandStorage(),
       skipHydration: true,
     },
   ),
 )
-
-export { generateGuestId }

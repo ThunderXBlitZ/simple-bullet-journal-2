@@ -1,6 +1,6 @@
 import type { Tag } from "./types"
 
-export const tagPresets: Omit<Tag, "id" | "createdAt">[] = [
+export const tagPresets: Omit<Tag, "id" | "createdAt" | "updatedAt">[] = [
   { name: "Gratitude", color: "#ec4899" }, // Pink
   { name: "Idea", color: "#f97316" }, // Orange
   { name: "Important", color: "#ef4444" }, // Red

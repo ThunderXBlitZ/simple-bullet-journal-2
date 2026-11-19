@@ -11,6 +11,7 @@ export interface BulletEntry {
   content: string
   indent: number
   tagIds?: string[] // Tags applied to this entry
+  order: number
   createdAt: string
   updatedAt: string
 }
@@ -20,6 +21,7 @@ export interface Tag {
   name: string
   color: string
   createdAt: string
+  updatedAt: string
 }
 
 export interface DailyLog {
@@ -32,13 +34,16 @@ export interface Habit {
   name: string
   icon: string
   color: string
+  order: number
   createdAt: string
+  updatedAt: string
 }
 
 export interface HabitCompletion {
   habitId: string
   date: string // YYYY-MM-DD
   completed: boolean
+  updatedAt: string
 }
 
 export interface Collection {
@@ -47,14 +52,19 @@ export interface Collection {
   icon: string
   items: CollectionItem[]
   createdAt: string
+  updatedAt: string
 }
 
 export interface CollectionItem {
   id: string
   content: string
   completed: boolean
+  order: number
   createdAt: string
+  updatedAt: string
 }
+
+export type Tombstones = Record<string, string> // record id -> ISO deletedAt
 
 export interface JournalState {
   dailyLogs: Record<string, DailyLog>
@@ -63,20 +73,14 @@ export interface JournalState {
   habitCompletions: HabitCompletion[]
   collections: Collection[]
   userName: string
+  userNameUpdatedAt: string
+  tombstones: Tombstones
   settings: {
     showDots: boolean
     showLines: boolean
     focusMode: boolean
     zoomLevel: number // 0.8, 0.9, 1, 1.1, 1.2, etc.
   }
-  // Google Auth & Sync State
-  authMethod: "guest" | "google"
-  guestId: string | null
-  googleId: string | null
   googleEmail: string | null
-  accessToken: string | null
-  refreshToken: string | null
-  googleDriveSyncEnabled: boolean
-  lastSyncTime: string | null
-  isSyncing: boolean
+  syncAccountId: string | null // Google account this journal is linked to (kept after sign-out)
 }

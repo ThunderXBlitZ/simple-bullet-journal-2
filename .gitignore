@@ -4,5 +4,7 @@ node_modules
 package-lock.json
 .DS_Store
 .google-oauth2-credentials
-*.md
 .env*
+!.env.example
+out
+tsconfig.tsbuildinfo

@@ -1,214 +1,156 @@
-/**
- * Google Sign-In Integration
- * Uses Google Identity Services library for OAuth2 authentication
- */
+/** Google Identity Services (token model) implementation of AuthProvider. */
 
-import { persistGoogleToken, getPersistedGoogleToken, clearPersistedGoogleToken } from '../storage/zustand-adapter'
+import { persistGoogleToken, getPersistedGoogleToken, clearPersistedGoogleToken } from "../storage/zustand-adapter"
+import type { AuthProvider, AuthUser } from "../auth/types"
+import { GOOGLE_CLIENT_ID, GOOGLE_SCOPES } from "./config"
 
-interface GoogleUser {
-  id: string;
-  email: string;
-  name: string;
-  given_name: string;
-  family_name: string;
-  picture: string;
+interface TokenResponse {
+  access_token?: string
+  expires_in?: number
+  error?: string
+}
+interface TokenClient {
+  requestAccessToken: (overrides?: { prompt?: string; hint?: string }) => void
 }
 
-interface GoogleAuthConfig {
-  clientId: string;
-  scope: string[];
-}
+const EXPIRY_BUFFER_MS = 60_000
 
-let tokenClient: any = null;
-let currentAccessToken: string | null = null;
+let tokenClient: TokenClient | null = null
+let initPromise: Promise<void> | null = null
+let accessToken: string | null = null
+let expiryMs = 0
+let pending: { resolve: (r: TokenResponse) => void; reject: (e: Error) => void } | null = null
+let lastAccount: { id?: string; email?: string } = {}
 
-/**
- * Initialize Google Sign-In
- * Call this once on app load
- */
-export async function initializeGoogle(config: GoogleAuthConfig): Promise<void> {
-  return new Promise((resolve) => {
-    // Load Google Identity Services library
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      if (window.google?.accounts?.oauth2) {
-        // Initialize token client with an empty callback — the real callback
-        // is set dynamically per-request in signInWithGoogle()
-        tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: config.clientId,
-          scope: config.scope.join(' '),
-          callback: '',
-        });
-        resolve();
-      }
-    };
-    document.head.appendChild(script);
-  });
-}
-
-/**
- * Sign in with Google and get access token for Drive API
- * Opens OAuth consent screen
- */
-export async function signInWithGoogle(): Promise<GoogleUser> {
-  if (!tokenClient) {
-    throw new Error('Google not initialized');
-  }
-
+function loadScript(): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Set callback dynamically so it resolves THIS promise when OAuth completes
-    tokenClient.callback = async (response: any) => {
-      if (response.error) {
-        reject(new Error(response.error));
-        return;
-      }
-      if (response.access_token) {
-        currentAccessToken = response.access_token;
-        const expiryMs = Date.now() + (response.expires_in ?? 3585) * 1000
-        persistGoogleToken(response.access_token, expiryMs)
-        try {
-          const user = await fetchUserInfo();
-          resolve(user);
-        } catch (error) {
-          reject(error);
-        }
-      } else {
-        reject(new Error('No access token received'));
-      }
-    };
-
-    tokenClient.requestAccessToken({ prompt: 'consent' });
-  });
+    if (window.google?.accounts?.oauth2) return resolve()
+    const s = document.createElement("script")
+    s.src = "https://accounts.google.com/gsi/client"
+    s.async = true
+    s.defer = true
+    s.onload = () => resolve()
+    s.onerror = () => reject(new Error("Couldn't load Google sign-in (offline or blocked)"))
+    document.head.appendChild(s)
+  })
 }
 
-/**
- * Sign out from Google
- */
-export function signOutFromGoogle(): void {
-  if (window.google?.accounts?.id) {
-    window.google.accounts.id.disableAutoSelect();
+function init(): Promise<void> {
+  initPromise ??= loadScript()
+    .then(() => {
+      tokenClient = window.google!.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: GOOGLE_SCOPES.join(" "),
+        callback: (r: TokenResponse) => {
+          const p = pending
+          pending = null
+          if (!p) return
+          if (r.error) p.reject(new Error(r.error))
+          else p.resolve(r)
+        },
+        error_callback: (e: { type: string }) => {
+          const p = pending
+          pending = null
+          p?.reject(new Error(e.type)) // popup_closed, popup_failed_to_open, …
+        },
+      })
+    })
+    .catch((e) => {
+      initPromise = null
+      throw e
+    })
+  return initPromise
+}
+
+async function requestToken(opts: { prompt: string; hint?: string }): Promise<void> {
+  await init()
+  if (pending) throw new Error("Sign-in already in progress")
+  const response = await new Promise<TokenResponse>((resolve, reject) => {
+    pending = { resolve, reject }
+    tokenClient!.requestAccessToken(opts)
+  })
+  if (!response.access_token) throw new Error("No access token received")
+  if (!window.google!.accounts.oauth2.hasGrantedAllScopes(response, ...GOOGLE_SCOPES)) {
+    throw new Error("Google Drive access wasn't granted. Sign in again and tick the Drive permission.")
   }
-  currentAccessToken = null;
-  tokenClient = null;
+  accessToken = response.access_token
+  expiryMs = Date.now() + (response.expires_in ?? 3600) * 1000
+  persistGoogleToken(accessToken, expiryMs)
 }
 
-/**
- * Get current access token
- */
-export function getAccessToken(): string | null {
-  return currentAccessToken;
+async function fetchUserInfo(): Promise<AuthUser> {
+  const res = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", { headers: { Authorization: `Bearer ${accessToken}` } })
+  if (!res.ok) throw new Error("Failed to fetch Google account info")
+  const d = await res.json()
+  return { id: d.id, email: d.email, name: d.name ?? d.email }
 }
 
-/**
- * Set access token (e.g., when loading from storage)
- */
-export function setAccessToken(token: string | null): void {
-  currentAccessToken = token;
+function clearToken(): void {
+  accessToken = null
+  expiryMs = 0
+  clearPersistedGoogleToken()
 }
 
-/**
- * Restore persisted token on app startup
- * - If non-expired token exists: restore it
- * - If expired: attempt silent refresh
- * - If no token: no-op
- */
-export async function restorePersistedToken(): Promise<void> {
-  const stored = await getPersistedGoogleToken();
-  if (!stored) return;
+export const googleAuth: AuthProvider = {
+  init,
 
-  const BUFFER_MS = 60_000; // consider expired 60s early
-  if (Date.now() < stored.expiryMs - BUFFER_MS) {
-    // Token is still valid
-    currentAccessToken = stored.token;
-  } else if (tokenClient) {
-    // Token is expired — attempt silent re-auth
+  async signIn(hint) {
+    await requestToken({ prompt: hint ? "" : "select_account", hint })
+    const user = await fetchUserInfo()
+    lastAccount = { id: user.id, email: user.email }
+    return user
+  },
+
+  async silentRefresh(opts) {
+    const hint = opts?.hint ?? lastAccount.email
+    const accountId = opts?.accountId ?? lastAccount.id
     try {
-      await refreshAccessToken();
+      await requestToken({ prompt: "none", hint })
+      if (accountId && (await fetchUserInfo()).id !== accountId) {
+        clearToken()
+        return false
+      }
+      lastAccount = { id: accountId, email: hint }
+      return true
     } catch {
-      // Silent refresh failed — leave token null
-      clearPersistedGoogleToken();
+      return false
     }
-  }
+  },
+
+  async restore() {
+    const stored = await getPersistedGoogleToken()
+    if (stored && Date.now() < stored.expiryMs - EXPIRY_BUFFER_MS) {
+      accessToken = stored.token
+      expiryMs = stored.expiryMs
+    }
+  },
+
+  getToken: () => (accessToken && Date.now() < expiryMs - EXPIRY_BUFFER_MS ? accessToken : null),
+
+  signOut() {
+    if (accessToken) window.google?.accounts.oauth2.revoke(accessToken, () => {})
+    clearToken()
+  },
 }
 
-/**
- * Refresh access token
- */
+/** Used by drive.ts (401 retry path). */
+export const getAccessToken = (): string | null => googleAuth.getToken()
+
 export async function refreshAccessToken(): Promise<string> {
-  if (!tokenClient) {
-    throw new Error('Google not initialized');
-  }
-
-  return new Promise((resolve, reject) => {
-    tokenClient.callback = (response: any) => {
-      if (response.error) {
-        reject(new Error(response.error));
-        return;
-      }
-      if (!response.access_token) {
-        reject(new Error('No access token received'));
-        return;
-      }
-      currentAccessToken = response.access_token;
-      const expiryMs = Date.now() + (response.expires_in ?? 3585) * 1000;
-      persistGoogleToken(response.access_token, expiryMs);
-      resolve(response.access_token);
-    };
-    tokenClient.requestAccessToken({ prompt: '' });
-  });
+  if (!(await googleAuth.silentRefresh())) throw new Error("Token refresh failed")
+  return accessToken!
 }
 
-/**
- * Parse ID token to get user info
- * In a real app, you'd verify the signature server-side
- */
-async function parseIdToken(): Promise<GoogleUser> {
-  // For this demo, we'll construct user info from the access token response
-  // In production, you should decode the ID token JWT
-
-  // Fallback: fetch user info from Google API
-  return fetchUserInfo();
-}
-
-/**
- * Fetch user info from Google API using access token
- */
-async function fetchUserInfo(): Promise<GoogleUser> {
-  const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-    headers: {
-      Authorization: `Bearer ${currentAccessToken}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch user info');
-  }
-
-  const data = await response.json();
-
-  return {
-    id: data.id,
-    email: data.email,
-    name: data.name,
-    given_name: data.given_name || data.name.split(' ')[0],
-    family_name: data.family_name || '',
-    picture: data.picture,
-  };
-}
-
-// Extend window type for Google API
 declare global {
   interface Window {
     google?: {
       accounts: {
-        id: any;
         oauth2: {
-          initTokenClient: (config: any) => any;
-        };
-      };
-    };
+          initTokenClient: (config: unknown) => TokenClient
+          hasGrantedAllScopes: (response: TokenResponse, ...scopes: string[]) => boolean
+          revoke: (token: string, done: () => void) => void
+        }
+      }
+    }
   }
 }

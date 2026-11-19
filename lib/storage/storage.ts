@@ -1,8 +1,8 @@
 /**
  * Storage abstraction layer for persisting journal data
  * Uses IndexedDB with two object stores:
- *   "data" — journal state, keyed by user storage key (bj-guest-{id}, bj-google-{id})
- *   "meta" — metadata: activeUserKey, guestId, user registry
+ *   "data" — journal state (primary key "bj-journal" + legacy keys left untouched)
+ *   "meta" — metadata: schema version, Google auth token
  */
 
 export interface StorageProvider {
@@ -100,7 +100,17 @@ class IndexedDBStorage implements StorageProvider {
     }
   }
 
-  // ── Meta store (active key, guest ID, user registry) ─────────────────
+  /** All keys in the data store (used once by the legacy migration). */
+  async listDataKeys(): Promise<string[]> {
+    const db = await this.getDB()
+    return new Promise((resolve, reject) => {
+      const req = db.transaction(DATA_STORE, "readonly").objectStore(DATA_STORE).getAllKeys()
+      req.onerror = () => reject(req.error)
+      req.onsuccess = () => resolve(req.result as string[])
+    })
+  }
+
+  // ── Meta store (schema version, Google auth token) ──────────────────
 
   async getMeta(key: string): Promise<string | null> {
     try {
@@ -125,47 +135,6 @@ class IndexedDBStorage implements StorageProvider {
     } catch (error) {
       console.error("IndexedDB removeMeta error:", error)
     }
-  }
-
-  /** Save display name + auth method for a user key (e.g. "bj-guest-{id}") */
-  async registerUser(userKey: string, displayName: string, authMethod: "guest" | "google"): Promise<void> {
-    await this.setMeta(`user/${userKey}`, JSON.stringify({ displayName, authMethod }))
-  }
-
-  /** Look up a registered user by their storage key */
-  async getUser(userKey: string): Promise<{ displayName: string; authMethod: "guest" | "google" } | null> {
-    const raw = await this.getMeta(`user/${userKey}`)
-    return raw ? JSON.parse(raw) : null
-  }
-
-  /** List all registered users, optionally filtered by auth method */
-  async listUsers(authMethod?: "guest" | "google"): Promise<{ userKey: string; displayName: string; authMethod: "guest" | "google" }[]> {
-    const db = await this.getDB()
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(META_STORE, "readonly")
-      const store = tx.objectStore(META_STORE)
-      const req = store.openCursor()
-      const results: { userKey: string; displayName: string; authMethod: "guest" | "google" }[] = []
-
-      req.onerror = () => reject(req.error)
-      req.onsuccess = () => {
-        const cursor = req.result
-        if (cursor) {
-          const key = cursor.key as string
-          if (key.startsWith("user/")) {
-            try {
-              const data = JSON.parse(cursor.value as string)
-              if (!authMethod || data.authMethod === authMethod) {
-                results.push({ userKey: key.replace("user/", ""), ...data })
-              }
-            } catch { /* skip malformed entries */ }
-          }
-          cursor.continue()
-        } else {
-          resolve(results)
-        }
-      }
-    })
   }
 }
 

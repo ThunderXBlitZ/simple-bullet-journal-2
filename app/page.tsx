@@ -12,20 +12,14 @@ import { CollectionsView } from "@/components/journal/collections-view"
 import { CommandPalette } from "@/components/journal/command-palette"
 import { SetupModal } from "@/components/journal/setup-modal"
 import { SettingsModal } from "@/components/journal/settings-modal"
-import { useJournalStore, GOOGLE_SYNC_ENABLED, GOOGLE_CONFIG, generateGuestId } from "@/lib/journal-store"
-import { initializeGoogle, restorePersistedToken, getAccessToken } from "@/lib/google/auth"
-import { debouncedSync, cancelSync } from "@/lib/google/auto-sync"
-import { downloadFromDrive } from "@/lib/google/drive"
-import { toast } from "sonner"
-import {
-  setActiveStorageKey,
-  clearActiveStorageKey,
-  getPersistedActiveKey,
-  persistGuestId,
-  getPersistedGuestId,
-  registerUser,
-  findGuestByName,
-} from "@/lib/storage/zustand-adapter"
+import { SyncBanner } from "@/components/journal/sync-banner"
+import { useJournalStore } from "@/lib/journal-store"
+import { migrateLegacyStores } from "@/lib/storage/legacy-migration"
+import { onRemoteWrite } from "@/lib/storage/cross-tab"
+import { googleAuth } from "@/lib/google/auth"
+import { startAutoSync, syncNow } from "@/lib/sync/engine"
+import { useSyncStatus } from "@/lib/sync/status"
+import { GOOGLE_CLIENT_ID } from "@/lib/google/config"
 import { cn } from "@/lib/utils"
 
 type View = "daily" | "weekly" | "monthly" | "habits" | "collections"
@@ -36,84 +30,18 @@ export default function Home() {
   const [commandOpen, setCommandOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const { settings, toggleSetting, userName, setUserName, authMethod, setGoogleUser, setAuthMethod } =
-    useJournalStore()
+  const { settings, toggleSetting, userName, setUserName } = useJournalStore()
 
-  // Mark as mounted and rehydrate store — until this fires,
-  // both server and client render the same empty shell (no mismatch)
+  // Migrate legacy stores, rehydrate, then mark mounted. Until this fires,
+  // both server and client render the same empty shell (no mismatch).
   useEffect(() => {
-    const initializeApp = async () => {
-      // Priority 1: restore the active session key (set on login, cleared on logout)
-      const savedKey = await getPersistedActiveKey()
-      if (savedKey) {
-        setActiveStorageKey(savedKey)
-      } else {
-        // Priority 2: returning guest — they logged out but their identity persists
-        const savedGuestId = await getPersistedGuestId()
-        if (savedGuestId) {
-          setActiveStorageKey(`bj-guest-${savedGuestId}`)
-        }
-        // If neither exists: first-time user — rehydrate gets empty state, SetupModal shows
-      }
-
+    const init = async () => {
+      await migrateLegacyStores()
       await useJournalStore.persist.rehydrate()
       setMounted(true)
     }
-    initializeApp()
-  }, [])
-
-  // Initialize Google Sign-In on app load
-  useEffect(() => {
-    const initGoogle = async () => {
-      if (GOOGLE_SYNC_ENABLED && GOOGLE_CONFIG.clientId) {
-        try {
-          await initializeGoogle(GOOGLE_CONFIG as { clientId: string; scope: string[] })
-          await restorePersistedToken()
-
-          // Pull Drive data on startup if user is a Google user with sync enabled
-          const store = useJournalStore.getState()
-          if (store.authMethod === 'google' && store.googleDriveSyncEnabled && getAccessToken()) {
-            const driveJson = await downloadFromDrive()
-            if (driveJson) {
-              const driveData = JSON.parse(driveJson)
-              useJournalStore.setState({
-                dailyLogs: driveData.dailyLogs || {},
-                tags: driveData.tags || [],
-                habits: driveData.habits || [],
-                habitCompletions: driveData.habitCompletions || [],
-                collections: driveData.collections || [],
-                userName: driveData.userName || store.userName,
-                settings: driveData.settings || store.settings,
-              })
-              toast.success("Journal synced from Drive")
-            }
-          }
-        } catch (error) {
-          console.error("Failed to initialize Google:", error)
-        }
-      }
-    }
-
-    initGoogle()
-  }, [])
-
-  // Setup auto-sync subscription
-  useEffect(() => {
-    if (!GOOGLE_SYNC_ENABLED) {
-      return
-    }
-
-    // Subscribe to store changes and trigger debounced sync
-    const unsubscribe = useJournalStore.subscribe(() => {
-      // Trigger debounced sync on any state change
-      debouncedSync()
-    })
-
-    // Cleanup on unmount
-    return () => {
-      unsubscribe()
-      cancelSync()
-    }
+    init()
+    return onRemoteWrite(() => { useJournalStore.persist.rehydrate() })
   }, [])
 
   // Apply zoom to root font size for proper scaling
@@ -121,44 +49,32 @@ export default function Home() {
     document.documentElement.style.fontSize = `${settings.zoomLevel * 100}%`
   }, [settings.zoomLevel])
 
+  // Google auth restore + background sync
+  useEffect(() => {
+    if (!mounted || !GOOGLE_CLIENT_ID) return
+    let stop: () => void = () => {}
+    let cancelled = false
+    ;(async () => {
+      await useSyncStatus.getState().loadLastSync()
+      try {
+        await googleAuth.init()
+      } catch {
+        return // offline / blocked: local-only until next load
+      }
+      await googleAuth.restore()
+      if (cancelled) return
+      stop = startAutoSync()
+      if (useJournalStore.getState().syncAccountId) void syncNow()
+    })()
+    return () => {
+      cancelled = true
+      stop()
+    }
+  }, [mounted])
+
   const handleDateClick = (date: Date) => {
     setSelectedDate(date)
     setCurrentView("daily")
-  }
-
-  const handleSetupComplete = async (authMethod: "guest" | "google", name: string, googleData?: any) => {
-    if (authMethod === "google" && googleData) {
-      const userKey = `bj-google-${googleData.id}`
-      setActiveStorageKey(userKey)
-      await useJournalStore.persist.rehydrate()
-      setGoogleUser(googleData.id, googleData.email, "", "")
-      await registerUser(userKey, name, "google")
-    } else {
-      // Check if a guest with this exact name already exists (returning guest)
-      const existingKey = await findGuestByName(name)
-
-      if (existingKey) {
-        // Returning guest — restore their data
-        const guestId = existingKey.replace("bj-guest-", "")
-        setActiveStorageKey(existingKey)
-        persistGuestId(guestId)
-        await useJournalStore.persist.rehydrate()
-        useJournalStore.setState({ guestId })
-        setAuthMethod("guest")
-      } else {
-        // New guest — fresh identity
-        const guestId = generateGuestId()
-        const userKey = `bj-guest-${guestId}`
-        setActiveStorageKey(userKey)
-        persistGuestId(guestId)
-        await useJournalStore.persist.rehydrate()
-        useJournalStore.setState({ guestId })
-        setAuthMethod("guest")
-        await registerUser(userKey, name, "guest")
-      }
-    }
-
-    setUserName(name)
   }
 
   // Command palette keyboard shortcut
@@ -191,19 +107,14 @@ export default function Home() {
     }
   }
 
-  // Until client-side hydration completes, render an empty shell so
-  // server HTML and first client render are identical (no hydration mismatch).
-  // This app is fully client-side (localStorage/IndexedDB) so SSR content has no value.
   if (!mounted) {
     return <div className="flex flex-col md:flex-row h-screen bg-background overflow-hidden" />
   }
 
-  // Don't render journal content until user is logged in
-  // This prevents data leakage of previous users' data
   if (!userName) {
     return (
       <div className="flex flex-col md:flex-row h-screen bg-background overflow-hidden">
-        <SetupModal open={true} onComplete={handleSetupComplete} />
+        <SetupModal open={true} onComplete={setUserName} />
       </div>
     )
   }
@@ -222,16 +133,20 @@ export default function Home() {
         </div>
       )}
 
-      {/* Main Content */}
-      <main
-        className={cn(
-          "flex-1 overflow-hidden flex flex-col",
-          "p-4 md:p-8",
-          "pb-16 md:pb-8", // Extra padding for mobile nav
-        )}
-      >
-        <div className="flex-1 overflow-y-auto max-w-4xl mx-auto w-full">{renderView()}</div>
-      </main>
+      {/* Content column (sync banner spans this column, not the sidebar) */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <SyncBanner />
+
+        <main
+          className={cn(
+            "flex-1 overflow-hidden flex flex-col",
+            "p-4 md:p-8",
+            "pb-16 md:pb-8", // Extra padding for mobile nav
+          )}
+        >
+          <div className="flex-1 overflow-y-auto max-w-4xl mx-auto w-full">{renderView()}</div>
+        </main>
+      </div>
 
       {/* Mobile Navigation */}
       {!settings.focusMode && (
