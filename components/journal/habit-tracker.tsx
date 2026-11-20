@@ -9,6 +9,7 @@ import { SortableItem, SortableList } from "./sortable"
 import { useJournalStore } from "@/lib/journal-store"
 import { getRandomQuote } from "@/lib/quotes"
 import { cn } from "@/lib/utils"
+import { JournalIcon } from "@/components/journal/journal-icon"
 
 export function HabitTracker() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -146,7 +147,7 @@ export function HabitTracker() {
                   handleClassName="w-5"
                 >
                   <div className="w-40 flex items-center gap-2 pr-2 truncate">
-                    <span>{habit.icon}</span>
+                    <JournalIcon name={habit.icon} />
                     <span className="font-serif text-sm truncate" title={habit.date ? `${habit.name} · ${habit.date}` : habit.name}>{habit.name}</span>
                     {habit.date && <span className="text-[10px] font-mono text-muted-foreground border border-border rounded px-1">{habit.date.slice(5)}</span>}
                   </div>

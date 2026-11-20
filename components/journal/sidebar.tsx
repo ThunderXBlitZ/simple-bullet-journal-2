@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
 import { cn } from "@/lib/utils"
+import { JournalIcon } from "@/components/journal/journal-icon"
 
 type View = "daily" | "weekly" | "monthly" | "habits" | "collections"
 
@@ -92,7 +93,7 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
           <div className="pl-7 space-y-1 mt-1">
             {collections.map((collection) => (
               <div key={collection.id} className="text-sm text-sidebar-foreground/70 py-1 px-2 truncate">
-                {collection.icon} {collection.name}
+                <JournalIcon name={collection.icon} size={14} className="mr-1.5 align-text-bottom" />{collection.name}
               </div>
             ))}
           </div>

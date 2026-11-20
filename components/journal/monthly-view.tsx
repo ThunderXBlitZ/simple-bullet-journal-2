@@ -13,7 +13,7 @@ import {
   startOfWeek,
   endOfWeek,
 } from "date-fns"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Check, Diamond } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
 import { getRandomQuote } from "@/lib/quotes"
@@ -153,7 +153,7 @@ export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
               ))}
               {dialogData?.habits.map(({ habit, done }) => (
                 <div key={habit.id} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="text-habit-complete w-3.5 text-center">{done ? "✓" : "◇"}</span>
+                  <span className="text-habit-complete w-3.5 text-center">{done ? <Check className="size-3" /> : <Diamond className="size-3" />}</span>
                   <span>{habit.name}</span>
                 </div>
               ))}
@@ -186,7 +186,7 @@ export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
           <span>○ Event</span>
           <span>— Note</span>
           <div className="flex items-center gap-2">
-            <span className="text-habit-complete">✓</span>
+            <Check className="size-3 text-habit-complete" />
             <span>Habits</span>
           </div>
         </div>

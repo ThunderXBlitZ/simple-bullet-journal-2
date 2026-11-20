@@ -5,6 +5,7 @@ import { format } from "date-fns"
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { FolderOpen, Repeat, Search, Tag as TagIcon, X } from "lucide-react"
 import { useJournalStore } from "@/lib/journal-store"
+import { JournalIcon } from "@/components/journal/journal-icon"
 
 interface CommandPaletteProps {
   open: boolean
@@ -89,7 +90,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPalett
             {results.habits.map((h) => (
               <CommandItem key={h.id} value={val(h.id)} onSelect={() => go("habits")}>
                 <Repeat className="mr-2 h-4 w-4" />
-                <span className="truncate">{h.icon} {h.name}</span>
+                <span className="truncate"><JournalIcon name={h.icon} size={14} className="mr-1.5 align-text-bottom" />{h.name}</span>
               </CommandItem>
             ))}
           </CommandGroup>
@@ -101,7 +102,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPalett
               <CommandItem key={c.id} value={val(c.id)} onSelect={() => go("collections", { collectionId: c.id })}>
                 <FolderOpen className="mr-2 h-4 w-4" />
                 <div className="flex flex-col min-w-0">
-                  <span className="truncate">{c.icon} {c.name}</span>
+                  <span className="truncate"><JournalIcon name={c.icon} size={14} className="mr-1.5 align-text-bottom" />{c.name}</span>
                   {item && !c.name.toLowerCase().includes(search.trim().toLowerCase()) && (
                     <span className="text-xs text-muted-foreground truncate">{item.content}</span>
                   )}

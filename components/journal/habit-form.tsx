@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { randomPlaceholder } from "@/lib/placeholders"
 import { cn } from "@/lib/utils"
+import { JournalIcon, ICON_CHOICES } from "@/components/journal/journal-icon"
 
-export const habitIcons = ["📚", "💪", "🧘", "💧", "🏃", "✍️", "🎯", "💤"]
+const habitIcons = ICON_CHOICES.slice(0, 8)
 export const habitColors = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"]
 
 export interface HabitDraft {
@@ -58,7 +59,7 @@ export function HabitForm({ initial, submitLabel, onSubmit, onCancel }: HabitFor
               onClick={() => setIcon(i)}
               className={cn("w-8 h-8 rounded flex items-center justify-center transition-colors", icon === i ? "bg-accent" : "hover:bg-accent/50")}
             >
-              {i}
+              <JournalIcon name={i} />
             </button>
           ))}
         </div>

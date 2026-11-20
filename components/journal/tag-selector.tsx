@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Plus, X } from "lucide-react"
+import { Plus, X, Check } from "lucide-react"
 import { useJournalStore } from "@/lib/journal-store"
 import { tagPresets } from "@/lib/tag-presets"
 import { cn } from "@/lib/utils"
@@ -108,7 +108,7 @@ export function TagSelector({ selectedTagIds, onTagsChange }: TagSelectorProps) 
                 >
                   <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
                   <span className="text-foreground">{tag.name}</span>
-                  {selectedTagIds.includes(tag.id) && <span className="ml-auto text-xs">✓</span>}
+                  {selectedTagIds.includes(tag.id) && <Check className="ml-auto size-3" />}
                 </button>
               ))
             )}

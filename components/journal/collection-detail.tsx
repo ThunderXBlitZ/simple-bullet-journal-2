@@ -8,6 +8,7 @@ import { useJournalStore } from "@/lib/journal-store"
 import { getRandomQuote } from "@/lib/quotes"
 import { cn } from "@/lib/utils"
 import { SortableItem, SortableList } from "./sortable"
+import { JournalIcon } from "@/components/journal/journal-icon"
 
 export function CollectionDetail({ collectionId, onBack }: { collectionId: string; onBack: () => void }) {
   const [newItemContent, setNewItemContent] = useState("")
@@ -31,7 +32,7 @@ export function CollectionDetail({ collectionId, onBack }: { collectionId: strin
 
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-serif text-xl flex items-center gap-2">
-          <span>{collection.icon}</span>
+          <JournalIcon name={collection.icon} size={20} />
           {collection.name}
         </h3>
         <span className="text-sm text-muted-foreground">

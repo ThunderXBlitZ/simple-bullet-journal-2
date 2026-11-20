@@ -10,17 +10,18 @@ import { randomPlaceholder } from "@/lib/placeholders"
 import { CollectionDetail } from "./collection-detail"
 import { SortableItem, SortableList } from "./sortable"
 import { cn } from "@/lib/utils"
+import { JournalIcon, ICON_CHOICES } from "@/components/journal/journal-icon"
 
 const templateOptions = [
-  { name: "Books to Read", icon: "📚" },
-  { name: "Movies to Watch", icon: "🎬" },
-  { name: "Goals", icon: "🎯" },
-  { name: "Gratitude Log", icon: "💜" },
-  { name: "Ideas", icon: "💡" },
-  { name: "Bucket List", icon: "✨" },
+  { name: "Books to Read", icon: "book-text" },
+  { name: "Movies to Watch", icon: "clap" },
+  { name: "Goals", icon: "target" },
+  { name: "Gratitude Log", icon: "heart" },
+  { name: "Ideas", icon: "lightbulb" },
+  { name: "Bucket List", icon: "sparkles" },
 ]
 
-const defaultIcons = ["📚", "🎬", "🎯", "💜", "💡", "✨", "🎵", "🏃", "✍️", "🌱"]
+const defaultIcons = ICON_CHOICES
 
 export function CollectionsView({ initialCollectionId = null }: { initialCollectionId?: string | null }) {
   const [isAdding, setIsAdding] = useState(false)
@@ -89,7 +90,7 @@ export function CollectionsView({ initialCollectionId = null }: { initialCollect
                       selectedIcon === icon ? "bg-accent" : "hover:bg-accent/50",
                     )}
                   >
-                    {icon}
+                    <JournalIcon name={icon} />
                   </button>
                 ))}
               </div>
@@ -119,7 +120,7 @@ export function CollectionsView({ initialCollectionId = null }: { initialCollect
                     onClick={() => handleAddCollection(template.name, template.icon)}
                     className="text-xs"
                   >
-                    {template.icon} {template.name}
+                    <JournalIcon name={template.icon} size={14} className="mr-1" />{template.name}
                   </Button>
                 ))}
               </div>
@@ -165,7 +166,7 @@ export function CollectionsView({ initialCollectionId = null }: { initialCollect
                   }}
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <span className="text-2xl">{collection.icon}</span>
+                    <JournalIcon name={collection.icon} size={28} />
                     <button
                       onClick={(e) => {
                         e.stopPropagation()

@@ -13,6 +13,7 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { SortableEntry, useEntrySensors } from "./entry-dnd"
 import { cn } from "@/lib/utils"
 import { getHabitsForDate } from "@/lib/journal-helpers"
+import { JournalIcon } from "@/components/journal/journal-icon"
 
 interface DailyLogProps {
   className?: string
@@ -148,7 +149,7 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
                     className="flex items-center gap-2 text-sm text-muted-foreground px-1 py-1 w-full text-left hover:bg-accent/20 rounded-sm"
                   >
                     <span className={cn("w-3 h-3 rounded-full border border-habit-complete", done && "bg-habit-complete")} />
-                    <span className={cn("truncate", done && "line-through")}>{h.icon} {h.name}</span>
+                    <span className={cn("truncate", done && "line-through")}><JournalIcon name={h.icon} size={14} className="mr-1.5 align-text-bottom" />{h.name}</span>
                   </button>
                 )
               })}
