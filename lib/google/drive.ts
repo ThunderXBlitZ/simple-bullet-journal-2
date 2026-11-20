@@ -62,108 +62,44 @@ function classifyResponse(response: Response): SyncError | null {
   return new SyncError(SyncErrorType.CLIENT_ERROR, `Client error ${status}`, status)
 }
 
-/**
- * Retry options
- */
 interface RetryOptions {
-  maxRetries?: number    // default: 3
-  baseDelayMs?: number   // default: 2000
-  maxDelayMs?: number    // default: 10000
+  maxRetries?: number // default 3
+  baseDelayMs?: number // default 2000, doubles each retry (±25% jitter)
+  maxDelayMs?: number // default 10000
 }
 
+const isTransient = (e: SyncError): boolean =>
+  e.type === SyncErrorType.NETWORK || e.type === SyncErrorType.SERVER_ERROR || e.type === SyncErrorType.RATE_LIMITED
+
 /**
- * Wraps async operations with exponential backoff retry logic
- * Retries on transient failures (NETWORK, SERVER_ERROR, RATE_LIMITED)
- * Special handling for 401: attempts refresh once, doesn't consume retry budget
- * Non-retryable errors (AUTH_EXPIRED after refresh, FORBIDDEN, CLIENT_ERROR) throw immediately
+ * Retries transient failures (network, 5xx, 429) with exponential backoff.
+ * A 401 refreshes the token once without using the retry budget; a second 401 or a failed refresh surfaces as AUTH_EXPIRED.
+ * Everything else (403, other 4xx) throws immediately.
  */
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  options?: RetryOptions,
-): Promise<T> {
-  const maxRetries = options?.maxRetries ?? 3
-  const baseDelayMs = options?.baseDelayMs ?? 2000
-  const maxDelayMs = options?.maxDelayMs ?? 10000
-
-  let lastError: SyncError | null = null
-
-  // Initial attempt
-  try {
-    return await fn()
-  } catch (e) {
-    if (!(e instanceof SyncError)) {
-      // Non-SyncError (unexpected type), rethrow as NETWORK error
-      throw new SyncError(SyncErrorType.NETWORK, String(e))
-    }
-    lastError = e
-  }
-
-  // Handle 401 specially: refresh token and retry once (doesn't consume budget)
-  if (lastError.type === SyncErrorType.AUTH_EXPIRED) {
-    try {
-      await refreshAccessToken()
-      return await fn()
-    } catch (e) {
-      if (e instanceof SyncError && e.type === SyncErrorType.AUTH_EXPIRED) {
-        throw e // Token refresh failed or second 401
-      }
-      if (!(e instanceof SyncError)) {
-        throw new SyncError(SyncErrorType.NETWORK, String(e))
-      }
-      throw e
-    }
-  }
-
-  // Retry budget for transient errors
-  const isRetryable = (error: SyncError): boolean =>
-    error.type === SyncErrorType.NETWORK ||
-    error.type === SyncErrorType.SERVER_ERROR ||
-    error.type === SyncErrorType.RATE_LIMITED
-
-  if (!isRetryable(lastError)) {
-    throw lastError // Non-retryable, fail immediately
-  }
-
-  // Exponential backoff retries
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const baseDelay = baseDelayMs * Math.pow(2, attempt - 1)
-    const delay = Math.min(baseDelay, maxDelayMs)
-    // Jitter: ±25% (0.75 to 1.25 multiplier)
-    const jitter = delay * (0.75 + Math.random() * 0.5)
-
-    await new Promise((resolve) => setTimeout(resolve, jitter))
-
+async function withRetry<T>(fn: () => Promise<T>, options?: RetryOptions): Promise<T> {
+  const { maxRetries = 3, baseDelayMs = 2000, maxDelayMs = 10000 } = options ?? {}
+  let retries = 0
+  let refreshed = false
+  for (;;) {
     try {
       return await fn()
     } catch (e) {
-      if (!(e instanceof SyncError)) {
-        lastError = new SyncError(SyncErrorType.NETWORK, String(e))
-      } else {
-        lastError = e
-      }
-
-      // If this attempt hit a 401, handle it
-      if (lastError.type === SyncErrorType.AUTH_EXPIRED && attempt < maxRetries) {
+      const err = e instanceof SyncError ? e : new SyncError(SyncErrorType.NETWORK, String(e))
+      if (err.type === SyncErrorType.AUTH_EXPIRED) {
+        if (refreshed) throw err
+        refreshed = true
         try {
           await refreshAccessToken()
-          // Continue to next retry iteration with fresh token
-          continue
         } catch {
-          throw lastError
+          throw err
         }
+        continue
       }
-
-      // If non-retryable, fail immediately (don't burn more retries)
-      if (!isRetryable(lastError)) {
-        throw lastError
-      }
-
-      // Otherwise: retryable error, loop to next attempt
+      if (!isTransient(err) || retries >= maxRetries) throw err
+      const delay = Math.min(baseDelayMs * 2 ** retries++, maxDelayMs) * (0.75 + Math.random() * 0.5)
+      await new Promise((resolve) => setTimeout(resolve, delay))
     }
   }
-
-  // All retries exhausted
-  throw lastError
 }
 
 export interface RemoteFile {
