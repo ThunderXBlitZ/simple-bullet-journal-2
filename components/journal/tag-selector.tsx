@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Plus, X, Check } from "lucide-react"
 import { useJournalStore } from "@/lib/journal-store"
-import { tagPresets } from "@/lib/tag-presets"
+import { tagPresets, tagColor } from "@/lib/tag-presets"
 import { cn } from "@/lib/utils"
 import type { Tag } from "@/lib/types"
 
@@ -66,7 +66,7 @@ export function TagSelector({ selectedTagIds, onTagsChange }: TagSelectorProps) 
             <div
               key={tag.id}
               className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full text-white"
-              style={{ backgroundColor: tag.color }}
+              style={{ backgroundColor: tagColor(tag.color) }}
             >
               {tag.name}
               <button
@@ -106,7 +106,7 @@ export function TagSelector({ selectedTagIds, onTagsChange }: TagSelectorProps) 
                     selectedTagIds.includes(tag.id) && "bg-accent"
                   )}
                 >
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: tag.color }} />
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: tagColor(tag.color) }} />
                   <span className="text-foreground">{tag.name}</span>
                   {selectedTagIds.includes(tag.id) && <Check className="ml-auto size-3" />}
                 </button>

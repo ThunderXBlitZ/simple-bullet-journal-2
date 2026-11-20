@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { LogOut, Maximize2, Minus, Minimize2, Moon, Plus, Sun } from "lucide-react"
+import { CheckIcon } from "@/components/icons/check"
 import { useTheme } from "next-themes"
 import { useJournalStore } from "@/lib/journal-store"
 import { googleAuth } from "@/lib/google/auth"
@@ -59,22 +60,26 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           {/* Your Name */}
           <div className="space-y-2">
             <label className="text-sm font-medium font-serif">Your Name</label>
-            <Input
-              type="text"
-              placeholder="Enter your name..."
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="font-serif text-base"
-            />
-            <Button
-              onClick={handleSaveName}
-              disabled={!nameInput.trim() || nameInput === userName}
-              variant="outline"
-              size="sm"
-            >
-              Save Name
-            </Button>
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                placeholder="Enter your name..."
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="font-serif text-base"
+              />
+              <Button
+                onClick={handleSaveName}
+                disabled={!nameInput.trim() || nameInput === userName}
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                aria-label="Save name"
+              >
+                <CheckIcon size={16} />
+              </Button>
+            </div>
           </div>
 
           <Separator />
@@ -82,16 +87,20 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           {/* Display: focus, zoom, theme in one row */}
           <div className="space-y-3">
             <label className="text-sm font-medium font-serif">Display</label>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+              <div className="group relative justify-self-start">
               <Button
                 variant={settings.focusMode ? "default" : "outline"}
                 size="icon"
                 onClick={() => toggleSetting("focusMode")}
                 aria-label={settings.focusMode ? "Exit focus mode" : "Enter focus mode"}
-                title="Focus mode"
               >
                 {settings.focusMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
               </Button>
+              <span role="tooltip" className="pointer-events-none absolute left-0 top-full z-50 mt-1 whitespace-nowrap rounded border border-border bg-popover px-2 py-1 text-xs text-popover-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                Focus mode
+              </span>
+              </div>
               <div className="flex items-center gap-1">
                 <Button variant="outline" size="icon" onClick={() => setZoom(settings.zoomLevel - 0.1)} aria-label="Zoom out">
                   <Minus className="w-4 h-4" />
@@ -104,7 +113,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <Button
                 variant="outline"
                 size="icon"
-                className="ml-auto"
+                className="justify-self-end"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 aria-label="Toggle dark mode"
                 title="Dark / light"
@@ -118,7 +127,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
           {/* Data: sync + backup */}
           <div className="space-y-4">
-            <label className="text-sm font-medium font-serif">Data</label>
             <SyncSection />
             <BackupSection />
           </div>

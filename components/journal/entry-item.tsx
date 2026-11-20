@@ -6,6 +6,7 @@ import { BulletIcon } from "./bullet-icon"
 import { TagSelector } from "./tag-selector"
 import { cn } from "@/lib/utils"
 import { Trash2, Edit2, Check, X, GripVertical } from "lucide-react"
+import { tagColor } from "@/lib/tag-presets"
 import { ClampedText } from "./clamped-text"
 import { useJournalStore } from "@/lib/journal-store"
 
@@ -204,7 +205,7 @@ export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, read
                   <div
                     key={tag.id}
                     className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full text-white"
-                    style={{ backgroundColor: tag.color }}
+                    style={{ backgroundColor: tagColor(tag.color) }}
                   >
                     {tag.name}
                   </div>

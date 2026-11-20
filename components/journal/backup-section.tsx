@@ -23,12 +23,13 @@ export function BackupSection() {
 
   return (
     <div className="space-y-3">
-      <h4 className="text-xs font-medium text-muted-foreground">Export / import</h4>
-      <p className="text-xs text-muted-foreground">Export your journal as JSON, or merge a backup back in.</p>
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={downloadBackup}><Download className="w-4 h-4 mr-2" />Export JSON</Button>
-        <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4 mr-2" />Import JSON</Button>
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-sm font-medium font-serif">Export / import (JSON)</label>
+        <div className="flex gap-2">
+        <Button variant="outline" size="icon" aria-label="Export JSON" onClick={downloadBackup}><Download className="w-4 h-4" /></Button>
+        <Button variant="outline" size="icon" aria-label="Import JSON" onClick={() => fileRef.current?.click()}><Upload className="w-4 h-4" /></Button>
         <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+        </div>
       </div>
     </div>
   )

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
-import { RefreshCw } from "lucide-react"
+import { RefreshCWIcon } from "@/components/icons/refresh-cw"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
 import { useSyncStatus } from "@/lib/sync/status"
@@ -42,7 +42,7 @@ export function SyncSection() {
 
   return (
     <div className="space-y-3">
-      <h4 className="text-xs font-medium text-muted-foreground">Google Drive</h4>
+      <label className="text-sm font-medium font-serif">Google</label>
       {!syncAccountId ? (
         <>
           <p className="text-xs text-muted-foreground">Back up and sync this journal across devices. Stored privately in your Drive's app folder.</p>
@@ -50,17 +50,17 @@ export function SyncSection() {
         </>
       ) : (
         <>
-          <p className="text-sm">{googleEmail}</p>
-          <p className="text-xs text-muted-foreground" aria-live="polite">{line}</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm truncate">{googleEmail}</p>
             {status === "reauth" ? (
               <Button variant="outline" size="sm" disabled={busy} onClick={() => run(reconnectGoogle)}>Reconnect</Button>
             ) : (
-              <Button variant="outline" size="sm" disabled={busy || status === "syncing"} onClick={() => run(syncNow)}>
-                <RefreshCw className="w-4 h-4 mr-2" />Sync now
+              <Button variant="outline" size="icon" className="shrink-0" aria-label="Sync now" disabled={busy || status === "syncing"} onClick={() => run(syncNow)}>
+                <RefreshCWIcon size={16} />
               </Button>
             )}
           </div>
+          <p className="text-xs text-muted-foreground" aria-live="polite">{line}</p>
           <p className="text-xs text-muted-foreground">Signing in as a different account replaces it (a backup file is downloaded first).</p>
         </>
       )}

@@ -176,7 +176,7 @@ export default function Home() {
         <button
           onClick={() => toggleSetting("focusMode")}
           className="fixed bottom-6 right-6 z-40 bg-primary text-primary-foreground p-3 rounded-full shadow-lg hover:bg-primary/90 transition-colors"
-          title="Exit Focus Mode (Cmd+K)"
+          title="Exit focus mode"
           aria-label="Exit Focus Mode"
         >
           <X className="w-6 h-6" />
