@@ -1,5 +1,6 @@
 import assert from "node:assert"
 import { mergeJournals } from "../lib/sync/merge"
+import { journalDataSchema } from "../lib/backup"
 import { emptyJournalData, type JournalData } from "../lib/journal-data"
 
 const T = (m: number) => new Date(Date.now() - 1000 * 60 * m).toISOString() // m minutes ago
@@ -42,6 +43,18 @@ const checks: [string, () => void][] = [
     const a = { ...emptyJournalData(), habits: [h], habitCompletions: [{ habitId: "h", date: "2026-01-01", completed: true, updatedAt: T(5) }] }
     const b = { ...emptyJournalData(), tombstones: { h: T(1) } }
     assert.equal(mergeJournals(a, b).habitCompletions.length, 0)
+  }],
+  ["schema round-trip keeps Habit.date and Collection.order", () => {
+    const habit = { id: "h", name: "n", icon: "leaf", color: "#000", date: "2026-01-01", order: 0, createdAt: T(50), updatedAt: T(50) }
+    const col = { id: "c", name: "n", icon: "star", items: [], order: 3, createdAt: T(50), updatedAt: T(50) }
+    const d = { ...emptyJournalData(), habits: [habit], collections: [col] }
+    const out = journalDataSchema.parse(JSON.parse(JSON.stringify(d)))
+    assert.equal(out.habits[0].date, "2026-01-01")
+    assert.equal(out.collections[0].order, 3)
+  }],
+  ["schema rejects malformed timestamps", () => {
+    const bad = { ...withEntries([entry("a", "x", 5, { updatedAt: "zzz" })]) }
+    assert.equal(journalDataSchema.safeParse(bad).success, false)
   }],
 ]
 let fail = 0
