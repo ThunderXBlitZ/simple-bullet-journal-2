@@ -1,5 +1,5 @@
 import type { JournalData } from "../journal-data"
-import { journalDataSchema } from "../backup"
+import { journalDataSchema } from "../schema"
 import { upgradeLegacyState } from "../storage/legacy-migration"
 
 export class RemoteTooNewError extends Error {}

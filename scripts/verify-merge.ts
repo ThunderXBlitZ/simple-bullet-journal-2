@@ -1,6 +1,6 @@
 import assert from "node:assert"
 import { mergeJournals } from "../lib/sync/merge"
-import { journalDataSchema } from "../lib/backup"
+import { journalDataSchema } from "../lib/schema"
 import { emptyJournalData, type JournalData } from "../lib/journal-data"
 
 const T = (m: number) => new Date(Date.now() - 1000 * 60 * m).toISOString() // m minutes ago
