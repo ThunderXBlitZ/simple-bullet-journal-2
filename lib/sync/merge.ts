@@ -6,10 +6,14 @@ const TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000
 interface Rec { id: string; updatedAt: string }
 interface Ordered extends Rec { order: number; createdAt: string }
 
+const json = new WeakMap<object, string>()
+const ser = (r: object): string => json.get(r) ?? (json.set(r, JSON.stringify(r)), json.get(r)!)
+
 /** Newest updatedAt wins; exact ties break on content so merge stays commutative. */
 function pick<T extends { updatedAt: string }>(a: T, b: T): T {
+  if (a === b) return a // same object (e.g. merging a journal with itself): nothing to compare
   if (b.updatedAt !== a.updatedAt) return b.updatedAt > a.updatedAt ? b : a
-  return JSON.stringify(b) > JSON.stringify(a) ? b : a
+  return ser(b) > ser(a) ? b : a // cached: records are immutable in the store, so repeat merges don't re-stringify
 }
 
 function mergeById<T extends Rec>(a: T[], b: T[]): Map<string, T> {
