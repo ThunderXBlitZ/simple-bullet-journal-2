@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   format,
   startOfMonth,
@@ -21,7 +21,7 @@ import { getRandomQuote } from "@/lib/quotes"
 import { cn } from "@/lib/utils"
 import { DndContext, DragOverlay, type DragStartEvent, type DragEndEvent } from "@dnd-kit/core"
 import type { BulletEntry } from "@/lib/types"
-import { getHabitsForDate } from "@/lib/journal-helpers"
+import { completionIndex, getHabitsForDate } from "@/lib/journal-helpers"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { BulletIcon } from "./bullet-icon"
 import { EntryDragChip, resolveEntryDrop, useEntrySensors, type EntryDragData } from "./entry-dnd"
@@ -40,14 +40,15 @@ export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
   const [dragging, setDragging] = useState<BulletEntry | null>(null)
   const [dialogDate, setDialogDate] = useState<string | null>(null)
 
+  const index = useMemo(() => completionIndex(habitCompletions), [habitCompletions])
   const dayData = (dateStr: string): DayData => ({
     dateStr,
     entries: getDailyLog(dateStr).entries,
     habits: getHabitsForDate(habits, dateStr).map((habit) => ({
       habit,
-      done: habitCompletions.some((c) => c.habitId === habit.id && c.date === dateStr && c.completed),
+      done: index.isDone(habit.id, dateStr),
     })),
-    habitsDone: habitCompletions.filter((c) => c.date === dateStr && c.completed).length,
+    habitsDone: index.doneOn(dateStr),
   })
 
   const onDragStart = (e: DragStartEvent) => setDragging((e.active.data.current as EntryDragData | undefined)?.entry ?? null)

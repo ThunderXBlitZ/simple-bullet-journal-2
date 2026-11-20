@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { format, addDays, subDays, isToday } from "date-fns"
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { SortableEntry, useEntrySensors } from "./entry-dnd"
 import { cn } from "@/lib/utils"
-import { getHabitsForDate } from "@/lib/journal-helpers"
+import { completionIndex, getHabitsForDate } from "@/lib/journal-helpers"
 import { JournalIcon } from "@/components/journal/journal-icon"
 
 interface DailyLogProps {
@@ -28,6 +28,7 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
 
   const { getDailyLog, addEntry, updateEntry, deleteEntry, cycleStatus, migrateIncompleteTasks, settings, reorderEntries, userName, habits, habitCompletions, toggleHabitCompletion } = useJournalStore(useShallow((s) => ({ getDailyLog: s.getDailyLog, addEntry: s.addEntry, updateEntry: s.updateEntry, deleteEntry: s.deleteEntry, cycleStatus: s.cycleStatus, migrateIncompleteTasks: s.migrateIncompleteTasks, settings: s.settings, reorderEntries: s.reorderEntries, userName: s.userName, habits: s.habits, habitCompletions: s.habitCompletions, toggleHabitCompletion: s.toggleHabitCompletion })))
   useJournalStore((s) => s.dailyLogs) // getDailyLog reads get(); subscribe so entry edits re-render
+  const index = useMemo(() => completionIndex(habitCompletions), [habitCompletions])
 
   const dailyLog = getDailyLog(dateStr)
   const dayHabits = getHabitsForDate(habits, dateStr)
@@ -130,7 +131,7 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
           {dayHabits.length > 0 && (
             <div className="space-y-1 pt-4">
               {dayHabits.map((h) => {
-                const done = habitCompletions.some((c) => c.habitId === h.id && c.date === dateStr && c.completed)
+                const done = index.isDone(h.id, dateStr)
                 return (
                   <button
                     key={h.id}

@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, addMonths, isToday } from "date-fns"
 import { ChevronLeft, ChevronRight, Plus, Trash2, Flame, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { HabitForm } from "./habit-form"
 import { SortableItem, SortableList } from "./sortable"
 import { useJournalStore } from "@/lib/journal-store"
+import { completionIndex } from "@/lib/journal-helpers"
 import { useShallow } from "zustand/react/shallow"
 import { getRandomQuote } from "@/lib/quotes"
 import { cn } from "@/lib/utils"
@@ -17,7 +18,7 @@ export function HabitTracker() {
   const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [quote, setQuote] = useState(() => getRandomQuote())
-  const { habits, habitCompletions, addHabit, updateHabit, deleteHabit, toggleHabitCompletion, getHabitStreak, reorderHabits, userName } = useJournalStore(useShallow((s) => ({ habits: s.habits, habitCompletions: s.habitCompletions, addHabit: s.addHabit, updateHabit: s.updateHabit, deleteHabit: s.deleteHabit, toggleHabitCompletion: s.toggleHabitCompletion, getHabitStreak: s.getHabitStreak, reorderHabits: s.reorderHabits, userName: s.userName })))
+  const { habits, habitCompletions, addHabit, updateHabit, deleteHabit, toggleHabitCompletion, reorderHabits, userName } = useJournalStore(useShallow((s) => ({ habits: s.habits, habitCompletions: s.habitCompletions, addHabit: s.addHabit, updateHabit: s.updateHabit, deleteHabit: s.deleteHabit, toggleHabitCompletion: s.toggleHabitCompletion, reorderHabits: s.reorderHabits, userName: s.userName })))
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
@@ -38,9 +39,8 @@ export function HabitTracker() {
 
   const editingHabit = habits.find((h) => h.id === editingId)
 
-  const isHabitComplete = (habitId: string, date: string) => {
-    return habitCompletions.some((c) => c.habitId === habitId && c.date === date && c.completed)
-  }
+  const index = useMemo(() => completionIndex(habitCompletions), [habitCompletions])
+  const isHabitComplete = index.isDone
 
   const getCompletionRate = (habitId: string) => {
     const monthCompletions = days.filter((day) => isHabitComplete(habitId, format(day, "yyyy-MM-dd"))).length
@@ -137,7 +137,7 @@ export function HabitTracker() {
             {/* Habits */}
             <SortableList ids={habits.map((h) => h.id)} onReorder={reorderHabits}>
             {habits.map((habit) => {
-              const streak = getHabitStreak(habit.id)
+              const streak = index.streak(habit.id)
               const rate = getCompletionRate(habit.id)
 
               return (

@@ -22,7 +22,6 @@ export interface JournalStore extends JournalState {
   updateHabit: (habitId: string, patch: { name: string; icon: string; color: string; date?: string }) => void
   deleteHabit: (habitId: string) => void
   toggleHabitCompletion: (habitId: string, date: string) => void
-  getHabitStreak: (habitId: string) => number
 
   // Collection Actions
   addCollection: (name: string, icon: string) => void

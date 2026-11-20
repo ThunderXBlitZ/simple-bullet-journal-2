@@ -1,8 +1,8 @@
-import { newId, nowIso, nextOrder, addTombstones, moveItem, reindex, calcStreak } from "../journal-helpers"
+import { newId, nowIso, nextOrder, addTombstones, moveItem, reindex } from "../journal-helpers"
 import type { Slice } from "./types"
 
 export const habitCollectionActions: Slice<
-  | "addHabit" | "updateHabit" | "deleteHabit" | "toggleHabitCompletion" | "getHabitStreak" | "reorderHabits"
+  | "addHabit" | "updateHabit" | "deleteHabit" | "toggleHabitCompletion" | "reorderHabits"
   | "addCollection" | "deleteCollection" | "addCollectionItem" | "toggleCollectionItem" | "deleteCollectionItem"
   | "reorderCollectionItems" | "reorderCollections"
 > = (set, get) => ({
@@ -46,8 +46,6 @@ export const habitCollectionActions: Slice<
           }
         })
       },
-
-      getHabitStreak: (habitId) => calcStreak(get().habitCompletions, habitId),
 
       addCollection: (name, icon) => {
         const now = nowIso()

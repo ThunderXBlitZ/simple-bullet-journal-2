@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { format, startOfWeek, addDays, subWeeks, addWeeks, isToday } from "date-fns"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,7 @@ import { useShallow } from "zustand/react/shallow"
 import { getRandomQuote } from "@/lib/quotes"
 import { DndContext, DragOverlay, type DragStartEvent, type DragEndEvent } from "@dnd-kit/core"
 import type { BulletEntry } from "@/lib/types"
-import { getHabitsForDate } from "@/lib/journal-helpers"
+import { completionIndex, getHabitsForDate } from "@/lib/journal-helpers"
 import { DraggableEntry, DroppableDay, EntryDragChip, resolveEntryDrop, useEntrySensors, type EntryDragData } from "./entry-dnd"
 import { cn } from "@/lib/utils"
 
@@ -22,6 +22,7 @@ export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
   const [quote, setQuote] = useState(() => getRandomQuote())
   const { getDailyLog, updateEntry, deleteEntry, cycleStatus, moveEntry, habits, habitCompletions, userName } = useJournalStore(useShallow((s) => ({ getDailyLog: s.getDailyLog, updateEntry: s.updateEntry, deleteEntry: s.deleteEntry, cycleStatus: s.cycleStatus, moveEntry: s.moveEntry, habits: s.habits, habitCompletions: s.habitCompletions, userName: s.userName })))
   useJournalStore((s) => s.dailyLogs) // getDailyLog reads get(); subscribe so entry edits re-render
+  const index = useMemo(() => completionIndex(habitCompletions), [habitCompletions])
   const sensors = useEntrySensors()
   const [dragging, setDragging] = useState<BulletEntry | null>(null)
 
@@ -117,7 +118,7 @@ export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
                     />
                   ))}
                   {getHabitsForDate(habits, dateStr).map((h) => {
-                    const done = habitCompletions.some((c) => c.habitId === h.id && c.date === dateStr && c.completed)
+                    const done = index.isDone(h.id, dateStr)
                     return (
                       <div key={h.id} className="flex items-center gap-1.5 text-xs text-muted-foreground px-1">
                         <span className={cn("w-1.5 h-1.5 rounded-full border border-habit-complete", done && "bg-habit-complete")} />
