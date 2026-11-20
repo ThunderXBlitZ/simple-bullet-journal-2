@@ -113,25 +113,25 @@ export function HabitTracker() {
             <p className="text-xs text-muted-foreground/60">Add a habit to start tracking</p>
           </div>
         ) : (
-          <div className="min-w-[600px]">
+          <div className="w-max min-w-full">
             {/* Day headers */}
             <div className="flex items-center gap-1 mb-2">
-              <div className="w-5" />
-              <div className="w-40" />
+              <div className="w-5 shrink-0" />
+              <div className="w-40 shrink-0" />
               {days.map((day) => (
                 <div
                   key={day.toISOString()}
                   className={cn(
-                    "w-7 h-7 flex items-center justify-center text-xs",
+                    "w-7 h-7 shrink-0 flex items-center justify-center text-xs",
                     isToday(day) && "text-primary font-bold",
                   )}
                 >
                   {format(day, "d")}
                 </div>
               ))}
-              <div className="w-20 text-center text-xs text-muted-foreground">Rate</div>
-              <div className="w-16 text-center text-xs text-muted-foreground">Streak</div>
-              <div className="w-14" />
+              <div className="w-20 shrink-0 text-center text-xs text-muted-foreground">Rate</div>
+              <div className="w-16 shrink-0 text-center text-xs text-muted-foreground">Streak</div>
+              <div className="w-14 shrink-0" />
             </div>
 
             {/* Habits */}
@@ -145,9 +145,9 @@ export function HabitTracker() {
                   key={habit.id}
                   id={habit.id}
                   className="flex items-center gap-1 mb-1 group bg-background"
-                  handleClassName="w-5"
+                  handleClassName="w-5 shrink-0"
                 >
-                  <div className="w-40 flex items-center gap-2 pr-2 truncate">
+                  <div className="w-40 shrink-0 flex items-center gap-2 pr-2 truncate">
                     <JournalIcon name={habit.icon} />
                     <span className="font-serif text-sm truncate" title={habit.date ? `${habit.name} · ${habit.date}` : habit.name}>{habit.name}</span>
                     {habit.date && <span className="text-[10px] font-mono text-muted-foreground border border-border rounded px-1">{habit.date.slice(5)}</span>}
@@ -162,7 +162,7 @@ export function HabitTracker() {
                         key={dateStr}
                         onClick={() => toggleHabitCompletion(habit.id, dateStr)}
                         className={cn(
-                          "w-7 h-7 rounded-sm transition-colors flex items-center justify-center",
+                          "w-7 h-7 shrink-0 rounded-sm transition-colors flex items-center justify-center",
                           completed ? "bg-habit-complete" : "bg-habit-incomplete hover:bg-accent",
                           isToday(day) && !completed && "ring-1 ring-primary/30",
                         )}
@@ -184,9 +184,9 @@ export function HabitTracker() {
                     )
                   })}
 
-                  <div className="w-20 text-center text-sm font-mono">{rate}%</div>
+                  <div className="w-20 shrink-0 text-center text-sm font-mono">{rate}%</div>
 
-                  <div className="w-16 flex items-center justify-center gap-1 text-sm">
+                  <div className="w-16 shrink-0 flex items-center justify-center gap-1 text-sm">
                     {streak > 0 && (
                       <>
                         <Flame className="w-3 h-3 text-orange-500" />
@@ -195,7 +195,7 @@ export function HabitTracker() {
                     )}
                   </div>
 
-                  <div className="w-14 flex opacity-60 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="w-14 shrink-0 flex opacity-60 md:opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => {
                         setIsAdding(false)
