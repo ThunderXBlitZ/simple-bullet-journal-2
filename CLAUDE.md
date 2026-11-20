@@ -14,9 +14,10 @@ Local-first bullet journal (Next.js 16 static export, React 19, Zustand, Tailwin
 ## File map
 - `app/page.tsx` — bootstrap, view switching.  `app/globals.css` — theme tokens.
 - `lib/journal-store.ts` — Zustand store + persist.  `lib/types.ts` — data types.
-- `lib/journal-data.ts` / `lib/journal-helpers.ts` — syncable subset + pure helpers.
+- `lib/journal-data.ts` / `lib/journal-helpers.ts` — syncable subset + pure helpers.  `lib/schema.ts` — zod schema (backup + remote).
 - `lib/sync/` — merge, remote format, status, engine, link.
 - `lib/storage/` — IndexedDB provider, Zustand adapter, cross-tab, legacy migration.
 - `lib/google/` — GIS auth + Drive transport.  `lib/auth/` — AuthProvider interface.
 - `lib/backup.ts` — JSON export/import.  `scripts/` — verification scripts.
+- `components/icons/` — lucide-animated (generated; use via `journal-icon.tsx` for habit/collection icons).
 - `components/journal/` — feature views/modals.  `components/ui/` — shadcn primitives.

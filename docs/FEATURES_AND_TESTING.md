@@ -1,48 +1,6 @@
-# Features & Test Guide
+# Test Guide
 
-Updated: 2026-11-19. Scope of this pass: **M1 security + M3 data model + M6 Google login/Drive sync**.
-M2 (static export/Workers), M4 (restyle) and M5 (month hints/tag filter) are **not** implemented yet.
-
----
-
-## 1. Feature overview
-
-### Journal (local-first)
-- **Daily log**: tasks, events, notes with bullet notation; status cycling
-  (open → complete → migrated → scheduled → irrelevant); inline edit; indent 0–3;
-  drag reorder; migrate incomplete tasks to another day.
-- **Tags**: preset tags plus custom tags; attach/remove on entries.
-- **Habits**: create/delete, icon+color, monthly completion grid, streaks, percentages, reorder.
-- **Collections**: custom lists with checkboxes, progress, reorder, delete.
-- **Views**: Daily, Weekly, Monthly, Habits, Collections; command palette (Cmd/Ctrl+K);
-  focus mode; light/dark themes; dots/lines; zoom.
-- **Persistence**: single IndexedDB key `bj-journal` (version 2). Legacy keys
-  (`bullet-journal-storage`, `bj-guest-*`, `bj-google-*`) are migrated once and left untouched.
-- **Cross-tab**: edits in one tab rehydrate the other via `BroadcastChannel`.
-- **Backup**: Settings → Backup → Export JSON / Import JSON (merge).
-
-### Data model (mergeable)
-- Every record has `id`, `createdAt`, `updatedAt`, and (where ordered) `order`.
-- Deletes are **tombstones** (`tombstones: { id: deletedAt }`, 90-day TTL), so deletes propagate.
-- Merge rule: newest `updatedAt` wins per record; edit-after-delete resurrects; tags with the same
-  name collapse and entries are remapped; habit completions for deleted habits are dropped.
-- Preset tags use deterministic ids so two fresh devices merge without duplicates.
-
-### Google login + Drive sync
-- Client-only Google Identity Services token flow. Scopes: `userinfo.profile`, `userinfo.email`,
-  `drive.appdata`. **No client secret.**
-- Tokens live only in the IndexedDB `meta` store (`googleAuth/accessToken`, `googleAuth/tokenExpiry`),
-  never in journal state and never exported.
-- One file `bullet-journal.json` in Drive **appDataFolder**. Legacy `bullet-journal-backup.json`
-  is read once as a fallback and never modified.
-- Engine: pull → merge → apply (re-merged against current local) → push with a `version` check;
-  retries with exponential backoff; 401 triggers a silent refresh.
-- Triggers: 5s debounce after a change, app load, tab refocus (≤ every 30s), `online`, manual Sync now.
-- Statuses: `Synced <time>` / `Syncing…` / `Paused — reconnect to resume.` / error message + top banner.
-- First link merges. Signing in as a **different** account replaces local after downloading a backup.
-- Sign out keeps the link; reconnect refuses a different account.
-
----
+Features and sync behavior: `GOOGLE_SYNC_GUIDE.md`, `USER_STORIES.md`, `docs/milestones/00-design-decisions.md`.
 
 ## 2. Prerequisites (one-time)
 
@@ -64,7 +22,7 @@ M2 (static export/Workers), M4 (restyle) and M5 (month hints/tag filter) are **n
 ```bash
 npx tsc --noEmit                 # must be clean
 npm run build                    # must succeed
-npx tsx scripts/verify-merge.ts  # 9 PASS lines, no FAIL (downloads tsx on first run)
+npx tsx scripts/verify-merge.ts  # 11 PASS lines, no FAIL (downloads tsx on first run)
 ```
 
 ---
@@ -81,7 +39,7 @@ npx tsx scripts/verify-merge.ts  # 9 PASS lines, no FAIL (downloads tsx on first
 - [ ] Clear site data → name dialog shows once; reload → it does not return.
 
 ### 4.2 Sign in & link (A)
-- [ ] Settings → Google Drive → **Sign in with Google** → consent, **tick Drive**.
+- [ ] Settings → Google → **Sign in with Google** → consent, **tick Drive**.
 - [ ] Status shows `Synced …`. No console errors.
 - [ ] Verify the file (copy a bearer token from a `googleapis` request):
   ```bash
@@ -109,11 +67,10 @@ npx tsx scripts/verify-merge.ts  # 9 PASS lines, no FAIL (downloads tsx on first
 - [ ] Two tabs of A open: still none.
 
 ### 4.7 Token expiry
-- [ ] DevTools → Application → IndexedDB → `meta` → set `googleAuth/tokenExpiry` to `0`, reload →
-  either silent resume, or the banner appears → **Reconnect** → `Synced`. Local data untouched.
+- [ ] Reload while signed in: sync resumes silently, or the banner appears -> **Reconnect** -> `Synced`. Local data untouched. (Tokens are memory-only; there is nothing in IndexedDB `meta` to edit.)
 
 ### 4.8 Revoked access
-- [ ] Revoke at myaccount.google.com/permissions → **Sync now** → banner/Reconnect → consent returns.
+- [ ] Revoke at myaccount.google.com/permissions → the sync icon → banner/Reconnect → consent returns.
 
 ### 4.9 Wrong account on reconnect
 - [ ] With an expired token, click **Reconnect** and pick a *different* Google account → error toast,
@@ -141,21 +98,3 @@ npx tsx scripts/verify-merge.ts  # 9 PASS lines, no FAIL (downloads tsx on first
   have new `order`/`updatedAt`; new records have UUID ids.
 - [ ] Export JSON → delete an entry → Import the file → entry stays deleted (tombstone beats older copy).
 - [ ] Import `package.json` → toast error, nothing changes.
-
-### 4.16 Production (after M2 lands)
-- [ ] Set the Cloudflare build variable `NEXT_PUBLIC_GOOGLE_CLIENT_ID`; deploy.
-- [ ] Repeat sign-in + one propagation test on the production URL; console has no CSP violations.
-
----
-
-## 5. Security follow-ups (do before pushing)
-
-- [ ] Rotate/delete the Google client secret that was previously committed (old value may still be in history).
-- [ ] Scrub unpushed history (M1 Task 3) and confirm `git log --all -S'GOCSPX' --oneline | wc -l` → `0`.
-- [ ] Confirm `git ls-files | grep -E '^\.env'` → only `.env.example`.
-
-## 6. Known gaps (out of scope for this pass)
-
-- M2: `output: 'export'`, `public/_headers`, `components.json` — configured for Cloudflare Pages Git integration.
-- M4: dead `mood-selector`/`mood-dropdown` code still present; restyle not applied.
-- M5: monthly hints + tag filtering not implemented.
