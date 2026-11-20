@@ -89,7 +89,7 @@ function handleError(e: unknown): SyncResult {
 
 const isLinked = (): boolean => !!useJournalStore.getState().syncAccountId
 
-const DATA_KEYS = ["dailyLogs", "tags", "habits", "habitCompletions", "collections", "userName", "tombstones"] as const
+const DATA_KEYS: (keyof ReturnType<typeof useJournalStore.getState>)[] = ["dailyLogs", "tags", "habits", "habitCompletions", "collections", "userName", "tombstones"]
 
 /** Start background sync; returns a stop function. Call once, after hydration + auth restore. */
 export function startAutoSync(): () => void {
@@ -101,7 +101,7 @@ export function startAutoSync(): () => void {
 
   const unsubscribe = useJournalStore.subscribe((s, prev) => {
     if (applyingRemote || !isLinked()) return
-    if (DATA_KEYS.some((k) => (s as any)[k] !== (prev as any)[k])) schedule(DEBOUNCE_MS)
+    if (DATA_KEYS.some((k) => s[k] !== prev[k])) schedule(DEBOUNCE_MS)
   })
   const onVisible = () => {
     if (document.visibilityState === "visible" && isLinked() && Date.now() - lastRun > FOCUS_THROTTLE_MS) void syncNow()

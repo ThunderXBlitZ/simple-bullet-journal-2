@@ -1,6 +1,6 @@
 import type { JournalData } from "../journal-data"
 import { journalDataSchema } from "../schema"
-import { upgradeLegacyState } from "../storage/legacy-migration"
+import { upgradeLegacyState, type LegacyState } from "../storage/legacy-migration"
 
 export class RemoteTooNewError extends Error {}
 export class RemoteInvalidError extends Error {}
@@ -10,7 +10,7 @@ export const serializeRemote = (data: JournalData): string =>
 
 /** Accepts schema-2 files and the legacy (pre-M6) snapshot. Never returns partial data. */
 export function parseRemote(text: string): JournalData {
-  let obj: any
+  let obj: Record<string, unknown> | null
   try {
     obj = JSON.parse(text)
   } catch {
@@ -22,6 +22,6 @@ export function parseRemote(text: string): JournalData {
     if (!parsed.success) throw new RemoteInvalidError("Drive file failed validation")
     return parsed.data as JournalData
   }
-  if (obj && typeof obj === "object" && "dailyLogs" in obj) return upgradeLegacyState(obj).data
+  if (obj && typeof obj === "object" && "dailyLogs" in obj) return upgradeLegacyState(obj as LegacyState).data
   throw new RemoteInvalidError("Drive file has an unknown format")
 }

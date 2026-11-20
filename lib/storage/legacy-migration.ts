@@ -2,33 +2,44 @@ import { getStorageProvider } from "./storage"
 import { emptyJournalData, type JournalData } from "../journal-data"
 import { mergeJournals } from "../sync/merge"
 import { EPOCH, nowIso } from "../journal-helpers"
-import type { BulletEntry } from "../types"
+import type { BulletEntry, Collection, CollectionItem, Habit, HabitCompletion, Tag } from "../types"
 
 const isLegacyKey = (k: string) => k === "bullet-journal-storage" || k.startsWith("bj-guest-") || k.startsWith("bj-google-")
 
+/** Pre-v2 persisted state: every field may be missing. */
+export interface LegacyState {
+  dailyLogs?: Record<string, { entries?: Partial<BulletEntry>[] }>
+  tags?: Partial<Tag>[]
+  habits?: Partial<Habit>[]
+  habitCompletions?: Partial<HabitCompletion>[]
+  collections?: (Partial<Omit<Collection, "items">> & { items?: Partial<CollectionItem>[] })[]
+  userName?: string
+  settings?: unknown
+}
+
 /** Fill fields that pre-v2 records lack. */
-export function upgradeLegacyState(s: any): { data: JournalData; settings: unknown; entryCount: number } {
-  const ts = (r: any) => r?.updatedAt ?? r?.createdAt ?? EPOCH
+export function upgradeLegacyState(s: LegacyState): { data: JournalData; settings: unknown; entryCount: number } {
+  const ts = (r: { updatedAt?: string; createdAt?: string }) => r.updatedAt ?? r.createdAt ?? EPOCH
   const logs: JournalData["dailyLogs"] = {}
   let entryCount = 0
-  for (const [date, log] of Object.entries<any>(s.dailyLogs ?? {})) {
-    const entries: BulletEntry[] = (log.entries ?? []).map((e: any, i: number) => ({ ...e, order: e.order ?? i, updatedAt: ts(e), createdAt: e.createdAt ?? EPOCH }))
+  for (const [date, log] of Object.entries(s.dailyLogs ?? {})) {
+    const entries: BulletEntry[] = (log.entries ?? []).map((e, i) => ({ ...e, order: e.order ?? i, updatedAt: ts(e), createdAt: e.createdAt ?? EPOCH }) as BulletEntry)
     entryCount += entries.length
     if (entries.length) logs[date] = { date, entries }
   }
   const data: JournalData = {
     ...emptyJournalData(),
     dailyLogs: logs,
-    tags: (s.tags ?? []).map((t: any) => ({ ...t, createdAt: t.createdAt ?? EPOCH, updatedAt: ts(t) })),
-    habits: (s.habits ?? []).map((h: any, i: number) => ({ ...h, order: h.order ?? i, createdAt: h.createdAt ?? EPOCH, updatedAt: ts(h) })),
-    habitCompletions: (s.habitCompletions ?? []).map((c: any) => ({ ...c, updatedAt: c.updatedAt ?? EPOCH })),
-    collections: (s.collections ?? []).map((c: any, ci: number) => ({
+    tags: (s.tags ?? []).map((t) => ({ ...t, createdAt: t.createdAt ?? EPOCH, updatedAt: ts(t) }) as Tag),
+    habits: (s.habits ?? []).map((h, i) => ({ ...h, order: h.order ?? i, createdAt: h.createdAt ?? EPOCH, updatedAt: ts(h) }) as Habit),
+    habitCompletions: (s.habitCompletions ?? []).map((c) => ({ ...c, updatedAt: c.updatedAt ?? EPOCH }) as HabitCompletion),
+    collections: (s.collections ?? []).map((c, ci) => ({
       ...c,
       order: c.order ?? ci,
       createdAt: c.createdAt ?? EPOCH,
       updatedAt: ts(c),
-      items: (c.items ?? []).map((it: any, i: number) => ({ ...it, order: it.order ?? i, createdAt: it.createdAt ?? EPOCH, updatedAt: ts(it) })),
-    })),
+      items: (c.items ?? []).map((it, i) => ({ ...it, order: it.order ?? i, createdAt: it.createdAt ?? EPOCH, updatedAt: ts(it) }) as CollectionItem),
+    }) as Collection),
     userName: s.userName ?? "",
     userNameUpdatedAt: s.userName ? nowIso() : EPOCH,
   }
@@ -45,7 +56,7 @@ export async function migrateLegacyStores(): Promise<void> {
     for (const key of (await p.listDataKeys()).filter(isLegacyKey)) {
       try {
         const raw = await p.getItem(key)
-        const state = raw ? JSON.parse(raw)?.state : null
+        const state = (raw ? JSON.parse(raw)?.state : null) as LegacyState | null
         if (state) found.push(upgradeLegacyState(state))
       } catch (e) {
         console.error(`Skipping unreadable legacy store ${key}`, e)
