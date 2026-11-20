@@ -89,10 +89,10 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
     >
       {/* Header */}
       <div className="pb-2 border-b border-border">
+        <div className="md:hidden mb-2 text-center font-serif text-sm font-semibold text-foreground">
+          {userName}'s Bullet Journal
+        </div>
         <div className="flex items-center justify-between gap-2">
-          <div className="md:hidden font-serif text-sm font-semibold text-foreground">
-            {userName}'s Bullet Journal
-          </div>
 
           {showMigrate && (
             <Button variant="outline" size="sm" onClick={handleMigrate} className="text-xs bg-transparent flex-shrink-0">
@@ -181,7 +181,7 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
       </div>
 
       {/* Legend */}
-      <div className="py-2 border-t border-border flex flex-wrap gap-3 md:gap-4 text-xs text-muted-foreground">
+      <div className="py-2 border-t border-border flex flex-wrap justify-center gap-3 md:gap-4 text-xs text-muted-foreground">
         <span>• Task</span>
         <span>○ Event</span>
         <span>— Note</span>

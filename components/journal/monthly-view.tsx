@@ -82,10 +82,10 @@ export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="pb-2 border-b border-border">
+        <div className="md:hidden mb-2 text-center font-serif text-sm font-semibold text-foreground">
+          {userName}'s Bullet Journal
+        </div>
         <div className="flex items-center justify-between gap-2">
-          <div className="md:hidden font-serif text-sm font-semibold text-foreground">
-            {userName}'s Bullet Journal
-          </div>
 
           <div className="flex items-center gap-1 md:gap-2 ml-auto">
             <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goPrevMonth}>
