@@ -5,11 +5,12 @@ import { PlusIcon } from "@/components/icons/plus"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { randomPlaceholder } from "@/lib/placeholders"
+import { tagColor } from "@/lib/tag-presets"
 import { cn } from "@/lib/utils"
 import { JournalIcon, ICON_CHOICES } from "@/components/journal/journal-icon"
 
 const habitIcons = ICON_CHOICES.slice(0, 8)
-export const habitColors = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"]
+export const habitColors = ["#b86b66", "#cf9a6b", "#c2a867", "#7fa585", "#6fa3a3", "#6f8fb0", "#8f7fae", "#c4838f"]
 
 export interface HabitDraft {
   name: string
@@ -29,7 +30,7 @@ interface HabitFormProps {
 export function HabitForm({ initial, submitLabel, onSubmit, onCancel }: HabitFormProps) {
   const [name, setName] = useState(initial?.name ?? "")
   const [icon, setIcon] = useState(initial?.icon ?? habitIcons[0])
-  const [color, setColor] = useState(initial?.color ?? habitColors[0])
+  const [color, setColor] = useState(initial?.color ? tagColor(initial.color) : habitColors[0])
   const [date, setDate] = useState(initial?.date ?? "")
   const [placeholder] = useState(randomPlaceholder)
 

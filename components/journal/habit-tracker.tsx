@@ -14,6 +14,7 @@ import { useJournalStore } from "@/lib/journal-store"
 import { completionIndex } from "@/lib/journal-helpers"
 import { useShallow } from "zustand/react/shallow"
 import { getRandomQuote } from "@/lib/quotes"
+import { tagColor } from "@/lib/tag-presets"
 import { cn } from "@/lib/utils"
 import { JournalIcon } from "@/components/journal/journal-icon"
 
@@ -170,7 +171,7 @@ export function HabitTracker() {
                           completed ? "bg-habit-complete" : "bg-habit-incomplete hover:bg-accent",
                           isToday(day) && !completed && "ring-1 ring-primary/30",
                         )}
-                        style={completed ? { backgroundColor: habit.color } : undefined}
+                        style={completed ? { backgroundColor: tagColor(habit.color) } : undefined}
                       >
                         {completed && (
                           <svg viewBox="0 0 16 16" className="w-3 h-3 text-white">

@@ -46,11 +46,6 @@
   --bullet-complete: oklch(0.6 0.1 150);
   --habit-complete: oklch(0.55 0.15 150);
   --habit-incomplete: oklch(0.9 0.005 80);
-  --mood-1: oklch(0.55 0.18 25);
-  --mood-2: oklch(0.6 0.12 50);
-  --mood-3: oklch(0.65 0.08 80);
-  --mood-4: oklch(0.6 0.12 150);
-  --mood-5: oklch(0.55 0.15 200);
 }
 
 /* Dark mode - modern sleek theme */
@@ -95,11 +90,6 @@
   --bullet-complete: oklch(0.6 0.12 150);
   --habit-complete: oklch(0.6 0.15 150);
   --habit-incomplete: oklch(0.25 0.01 260);
-  --mood-1: oklch(0.6 0.18 25);
-  --mood-2: oklch(0.65 0.12 50);
-  --mood-3: oklch(0.7 0.08 80);
-  --mood-4: oklch(0.65 0.12 150);
-  --mood-5: oklch(0.6 0.15 200);
 }
 
 @theme inline {
@@ -150,11 +140,6 @@
   --color-bullet-complete: var(--bullet-complete);
   --color-habit-complete: var(--habit-complete);
   --color-habit-incomplete: var(--habit-incomplete);
-  --color-mood-1: var(--mood-1);
-  --color-mood-2: var(--mood-2);
-  --color-mood-3: var(--mood-3);
-  --color-mood-4: var(--mood-4);
-  --color-mood-5: var(--mood-5);
 }
 
 @layer base {
