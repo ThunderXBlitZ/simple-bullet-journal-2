@@ -15,9 +15,9 @@ const item = z.object({ id: z.string(), content: z.string(), completed: z.boolea
 export const journalDataSchema = z.object({
   dailyLogs: z.record(z.object({ date: z.string(), entries: z.array(entry) })),
   tags: z.array(z.object({ id: z.string(), name: z.string(), color: z.string(), createdAt: iso, updatedAt: iso })),
-  habits: z.array(z.object({ id: z.string(), name: z.string(), icon: z.string(), color: z.string(), order: z.number(), createdAt: iso, updatedAt: iso })),
+  habits: z.array(z.object({ id: z.string(), name: z.string(), icon: z.string(), color: z.string(), date: z.string().optional(), order: z.number(), createdAt: iso, updatedAt: iso })),
   habitCompletions: z.array(z.object({ habitId: z.string(), date: z.string(), completed: z.boolean(), updatedAt: iso })),
-  collections: z.array(z.object({ id: z.string(), name: z.string(), icon: z.string(), items: z.array(item), createdAt: iso, updatedAt: iso })),
+  collections: z.array(z.object({ id: z.string(), name: z.string(), icon: z.string(), items: z.array(item), order: z.number().optional(), createdAt: iso, updatedAt: iso })),
   userName: z.string(), userNameUpdatedAt: iso, tombstones: z.record(z.string()),
 })
 const backupSchema = z.object({ app: z.literal("bullet-journal"), schema: z.literal(2), exportedAt: iso, data: journalDataSchema })
