@@ -1,6 +1,6 @@
 import { format } from "date-fns"
 import { tagPresets } from "./tag-presets"
-import type { HabitCompletion, Tag, Tombstones } from "./types"
+import type { Habit, HabitCompletion, Tag, Tombstones } from "./types"
 
 export const EPOCH = "1970-01-01T00:00:00.000Z"
 
@@ -52,3 +52,6 @@ export function calcStreak(completions: HabitCompletion[], habitId: string, toda
   }
   return streak
 }
+
+/** Habits pinned to a specific date (undated habits are tracker-only and never returned). */
+export const getHabitsForDate = (habits: Habit[], date: string): Habit[] => habits.filter((h) => h.date === date)

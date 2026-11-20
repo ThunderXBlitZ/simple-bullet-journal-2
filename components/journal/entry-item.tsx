@@ -5,27 +5,29 @@ import type { BulletEntry, Tag } from "@/lib/types"
 import { BulletIcon } from "./bullet-icon"
 import { TagSelector } from "./tag-selector"
 import { cn } from "@/lib/utils"
-import { Trash2, Edit2, Check, X } from "lucide-react"
+import { Trash2, Edit2, Check, X, GripVertical } from "lucide-react"
+import { ClampedText } from "./clamped-text"
 import { useJournalStore } from "@/lib/journal-store"
 
-interface EntryItemProps {
+export interface EntryItemProps {
   entry: BulletEntry
   onUpdate: (updates: Partial<BulletEntry>) => void
   onDelete: () => void
   onCycleStatus: () => void
   date: string
   readonly?: boolean
-  index?: number
-  onReorder?: (fromIndex: number, toIndex: number) => void
+  /** Grip handle wiring from dnd-kit; omit to hide the handle. */
+  dragHandle?: { ref: (el: HTMLElement | null) => void; props: React.HTMLAttributes<HTMLElement> }
+  dragging?: boolean
+  /** Weekly view: clamp text to 2 lines, no expand. */
+  compact?: boolean
 }
 
-export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, readonly, index, onReorder }: EntryItemProps) {
+export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, readonly, dragHandle, dragging, compact }: EntryItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(entry.title || "")
   const [editContent, setEditContent] = useState(entry.content)
   const [editTagIds, setEditTagIds] = useState(entry.tagIds || [])
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragOver, setDragOver] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const contentRef = useRef<HTMLTextAreaElement>(null)
   const { addTagToEntry, removeTagFromEntry, tags } = useJournalStore()
@@ -78,55 +80,16 @@ export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, read
     setIsEditing(false)
   }
 
-  const handleDragStart = (e: React.DragEvent) => {
-    if (index !== undefined) {
-      e.dataTransfer.effectAllowed = "move"
-      e.dataTransfer.setData("text/plain", index.toString())
-      setIsDragging(true)
-    }
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = "move"
-    setDragOver(true)
-  }
-
-  const handleDragLeave = () => {
-    setDragOver(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-    setIsDragging(false)
-
-    const fromIndex = parseInt(e.dataTransfer.getData("text/plain"), 10)
-    if (index !== undefined && onReorder && fromIndex !== index) {
-      onReorder(fromIndex, index)
-    }
-  }
-
-  const handleDragEnd = () => {
-    setIsDragging(false)
-    setDragOver(false)
-  }
-
-  const isComplete = entry.status === "complete" || entry.status === "irrelevant"
+  const isTask = entry.type === "task"
+  const isComplete = isTask && (entry.status === "complete" || entry.status === "irrelevant")
+  const lines = compact ? 2 : 5
 
   return (
     <div
-      draggable={!readonly && !isEditing}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      onDragEnd={handleDragEnd}
       className={cn(
-        "flex flex-col gap-0.5 py-1 group hover:bg-accent/20 rounded-sm transition-colors",
+        "flex flex-col gap-0.5 py-2 group hover:bg-accent/20 rounded-sm transition-colors",
         isComplete && "opacity-60",
-        dragOver && "bg-accent/50 border-l-2 border-primary",
-        !readonly && !isEditing && "cursor-grab active:cursor-grabbing",
+        dragging && "opacity-50 bg-accent/40",
       )}
       style={{ paddingLeft: `${entry.indent * 24 + 4}px`, paddingRight: "4px" }}
     >
@@ -186,17 +149,27 @@ export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, read
       ) : (
         <>
           {/* View Mode */}
-          <div className="flex items-start gap-2 pb-4">
-            <BulletIcon type={entry.type} status={entry.status} onClick={entry.type === "task" ? onCycleStatus : undefined} />
-            <div className="flex-1 flex flex-col gap-2">
+          <div className={cn("flex items-start gap-2", !compact && "pb-4")}>
+            {dragHandle && !isEditing && (
+              <button
+                type="button"
+                ref={dragHandle.ref}
+                {...dragHandle.props}
+                style={{ touchAction: "none" }}
+                className="mt-0.5 -ml-1 p-0.5 cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground flex-shrink-0"
+                aria-label="Drag to reorder"
+              >
+                <GripVertical className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <BulletIcon type={entry.type} status={entry.status} onClick={isTask ? onCycleStatus : undefined} />
+            <div className="flex-1 min-w-0 flex flex-col gap-2">
               {entry.title && (
-                <span className={cn("font-serif font-semibold text-base", isComplete && "line-through")}>
+                <span className={cn("font-serif font-semibold text-base", compact && "line-clamp-1", isComplete && "line-through")}>
                   {entry.title}
                 </span>
               )}
-              <span className={cn("font-serif text-base", isComplete && "line-through")}>
-                {entry.content}
-              </span>
+              <ClampedText text={entry.content} lines={lines} className={cn("font-serif text-base", isComplete && "line-through")} />
             </div>
 
             <div className="flex items-center gap-1">

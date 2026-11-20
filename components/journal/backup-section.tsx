@@ -22,8 +22,8 @@ export function BackupSection() {
   }
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium">Backup</h3>
+    <div className="space-y-3">
+      <h4 className="text-xs font-medium text-muted-foreground">Export / import</h4>
       <p className="text-xs text-muted-foreground">Export your journal as JSON, or merge a backup back in.</p>
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={downloadBackup}><Download className="w-4 h-4 mr-2" />Export JSON</Button>

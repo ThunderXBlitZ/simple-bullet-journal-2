@@ -29,6 +29,7 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<View>("daily")
   const [commandOpen, setCommandOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const [collectionId, setCollectionId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const { settings, toggleSetting, userName, setUserName } = useJournalStore()
 
@@ -93,7 +94,7 @@ export default function Home() {
   const renderView = () => {
     switch (currentView) {
       case "daily":
-        return <DailyLog initialDate={selectedDate} />
+        return <DailyLog key={selectedDate?.getTime()} initialDate={selectedDate} />
       case "weekly":
         return <WeeklyView onDateClick={handleDateClick} />
       case "monthly":
@@ -101,7 +102,7 @@ export default function Home() {
       case "habits":
         return <HabitTracker />
       case "collections":
-        return <CollectionsView />
+        return <CollectionsView key={collectionId ?? "all"} initialCollectionId={collectionId} />
       default:
         return <DailyLog initialDate={selectedDate} />
     }
@@ -162,7 +163,9 @@ export default function Home() {
       <CommandPalette
         open={commandOpen}
         onOpenChange={setCommandOpen}
-        onNavigate={(view) => {
+        onNavigate={(view, target) => {
+          if (view === "daily") setSelectedDate(target?.date ? new Date(`${target.date}T00:00:00`) : undefined)
+          setCollectionId(view === "collections" ? (target?.collectionId ?? null) : null)
           setCurrentView(view as View)
           setCommandOpen(false)
         }}

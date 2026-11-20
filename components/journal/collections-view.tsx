@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useJournalStore } from "@/lib/journal-store"
 import { getRandomQuote } from "@/lib/quotes"
+import { randomPlaceholder } from "@/lib/placeholders"
+import { CollectionDetail } from "./collection-detail"
+import { SortableItem, SortableList } from "./sortable"
 import { cn } from "@/lib/utils"
 
 const templateOptions = [
@@ -19,23 +22,19 @@ const templateOptions = [
 
 const defaultIcons = ["📚", "🎬", "🎯", "💜", "💡", "✨", "🎵", "🏃", "✍️", "🌱"]
 
-export function CollectionsView() {
+export function CollectionsView({ initialCollectionId = null }: { initialCollectionId?: string | null }) {
   const [isAdding, setIsAdding] = useState(false)
   const [newName, setNewName] = useState("")
   const [selectedIcon, setSelectedIcon] = useState(defaultIcons[0])
-  const [selectedCollection, setSelectedCollection] = useState<string | null>(null)
-  const [newItemContent, setNewItemContent] = useState("")
-  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null)
+  const [selectedCollection, setSelectedCollection] = useState<string | null>(initialCollectionId)
+  const [placeholder, setPlaceholder] = useState(randomPlaceholder)
   const [quote, setQuote] = useState(() => getRandomQuote())
 
   const {
     collections,
     addCollection,
     deleteCollection,
-    addCollectionItem,
-    toggleCollectionItem,
-    deleteCollectionItem,
-    reorderCollectionItems,
+    reorderCollections,
   } = useJournalStore()
 
   const handleAddCollection = (name?: string, icon?: string) => {
@@ -47,48 +46,6 @@ export function CollectionsView() {
       setIsAdding(false)
     }
   }
-
-  const handleAddItem = (collectionId: string) => {
-    if (newItemContent.trim()) {
-      addCollectionItem(collectionId, newItemContent.trim())
-      setNewItemContent("")
-    }
-  }
-
-  const handleItemDragStart = (e: React.DragEvent, itemId: string) => {
-    e.dataTransfer.effectAllowed = "move"
-    e.dataTransfer.setData("text/plain", itemId)
-  }
-
-  const handleItemDragOver = (e: React.DragEvent, itemId: string) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = "move"
-    setDragOverItemId(itemId)
-  }
-
-  const handleItemDragLeave = () => {
-    setDragOverItemId(null)
-  }
-
-  const handleItemDrop = (e: React.DragEvent, toItemId: string, collectionId: string) => {
-    e.preventDefault()
-    setDragOverItemId(null)
-    const fromItemId = e.dataTransfer.getData("text/plain")
-    const collection = collections.find((c) => c.id === collectionId)
-    if (collection) {
-      const fromIndex = collection.items.findIndex((i) => i.id === fromItemId)
-      const toIndex = collection.items.findIndex((i) => i.id === toItemId)
-      if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
-        reorderCollectionItems(collectionId, fromIndex, toIndex)
-      }
-    }
-  }
-
-  const handleItemDragEnd = () => {
-    setDragOverItemId(null)
-  }
-
-  const activeCollection = collections.find((c) => c.id === selectedCollection)
 
   return (
     <div className="flex flex-col h-full">
@@ -102,10 +59,13 @@ export function CollectionsView() {
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Collection name..."
+          placeholder={placeholder}
           className="font-serif"
           autoFocus={isAdding}
-          onFocus={() => setIsAdding(true)}
+          onFocus={() => {
+            if (!isAdding) setPlaceholder(randomPlaceholder())
+            setIsAdding(true)
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleAddCollection()
             if (e.key === "Escape") {
@@ -176,106 +136,17 @@ export function CollectionsView() {
             <p className="text-lg font-serif">{quote}</p>
             <p className="text-xs text-muted-foreground/60">Create one to organize your world</p>
           </div>
-        ) : selectedCollection && activeCollection ? (
-          // Collection Detail View
-          <div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedCollection(null)
-                setQuote(getRandomQuote())
-              }}
-              className="mb-4"
-            >
-              ← Back to collections
-            </Button>
-
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-serif text-xl flex items-center gap-2">
-                <span>{activeCollection.icon}</span>
-                {activeCollection.name}
-              </h3>
-              <span className="text-sm text-muted-foreground">
-                {activeCollection.items.filter((i) => i.completed).length}/{activeCollection.items.length} complete
-              </span>
-            </div>
-
-            <div className="space-y-1 mb-4">
-              {activeCollection.items.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                  <div className="text-5xl mb-3 font-mono">o_o</div>
-                  <p className="text-sm font-serif">{quote}</p>
-                  <p className="text-xs text-muted-foreground/60">Add an item to get started</p>
-                </div>
-              ) : (
-                activeCollection.items.map((item) => (
-                <div
-                  key={item.id}
-                  draggable
-                  onDragStart={(e) => handleItemDragStart(e, item.id)}
-                  onDragOver={(e) => handleItemDragOver(e, item.id)}
-                  onDragLeave={handleItemDragLeave}
-                  onDrop={(e) => handleItemDrop(e, item.id, activeCollection.id)}
-                  onDragEnd={handleItemDragEnd}
-                  className={cn(
-                    "flex items-center gap-3 py-2 px-2 rounded transition-colors cursor-grab active:cursor-grabbing",
-                    dragOverItemId === item.id && "bg-accent/50 border-l-2 border-primary",
-                    !dragOverItemId && "hover:bg-accent/30",
-                    "group"
-                  )}
-                >
-                  <button
-                    onClick={() => toggleCollectionItem(activeCollection.id, item.id)}
-                    className={cn(
-                      "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
-                      item.completed ? "bg-primary border-primary" : "border-muted-foreground/30 hover:border-primary",
-                    )}
-                  >
-                    {item.completed && (
-                      <svg viewBox="0 0 16 16" className="w-3 h-3 text-primary-foreground">
-                        <path
-                          d="M3 8l3 3 7-7"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    )}
-                  </button>
-
-                  <span className={cn("flex-1 font-serif", item.completed && "line-through opacity-60")}>
-                    {item.content}
-                  </span>
-
-                  <button
-                    onClick={() => deleteCollectionItem(activeCollection.id, item.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-                ))
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <Input
-                value={newItemContent}
-                onChange={(e) => setNewItemContent(e.target.value)}
-                placeholder="Add an item..."
-                className="font-serif"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAddItem(activeCollection.id)
-                }}
-              />
-              <Button onClick={() => handleAddItem(activeCollection.id)}>Add</Button>
-            </div>
-          </div>
+        ) : selectedCollection && collections.some((c) => c.id === selectedCollection) ? (
+          <CollectionDetail
+            collectionId={selectedCollection}
+            onBack={() => {
+              setSelectedCollection(null)
+              setQuote(getRandomQuote())
+            }}
+          />
         ) : (
           // Collections Grid
+          <SortableList ids={collections.map((c) => c.id)} onReorder={reorderCollections} grid>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {collections.map((collection) => {
               const completedCount = collection.items.filter((i) => i.completed).length
@@ -283,9 +154,11 @@ export function CollectionsView() {
               const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
 
               return (
-                <div
+                <SortableItem
                   key={collection.id}
-                  className="border border-border rounded-lg p-4 hover:border-primary/50 transition-colors cursor-pointer group"
+                  id={collection.id}
+                  className="relative border border-border rounded-lg p-4 pt-6 bg-background hover:border-primary/50 transition-colors cursor-pointer group"
+                  handleClassName="absolute top-1 left-1 p-0.5"
                   onClick={() => {
                     setSelectedCollection(collection.id)
                     setQuote(getRandomQuote())
@@ -298,7 +171,7 @@ export function CollectionsView() {
                         e.stopPropagation()
                         deleteCollection(collection.id)
                       }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive"
+                      className="opacity-60 md:opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -314,25 +187,13 @@ export function CollectionsView() {
                       <div className="h-full bg-primary transition-all" style={{ width: `${progressPercent}%` }} />
                     </div>
                   )}
-                </div>
+                </SortableItem>
               )
             })}
           </div>
+          </SortableList>
         )}
       </div>
     </div>
-  )
-}
-
-function ListIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <line x1="8" y1="6" x2="21" y2="6" />
-      <line x1="8" y1="12" x2="21" y2="12" />
-      <line x1="8" y1="18" x2="21" y2="18" />
-      <line x1="3" y1="6" x2="3.01" y2="6" strokeLinecap="round" />
-      <line x1="3" y1="12" x2="3.01" y2="12" strokeLinecap="round" />
-      <line x1="3" y1="18" x2="3.01" y2="18" strokeLinecap="round" />
-    </svg>
   )
 }

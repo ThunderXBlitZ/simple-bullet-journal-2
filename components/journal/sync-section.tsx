@@ -3,13 +3,12 @@
 import { useState } from "react"
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
-import { LogOut, RefreshCw } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
 import { useSyncStatus } from "@/lib/sync/status"
 import { syncNow } from "@/lib/sync/engine"
 import { connectGoogle, reconnectGoogle } from "@/lib/sync/link"
-import { googleAuth } from "@/lib/google/auth"
 import { GOOGLE_CLIENT_ID } from "@/lib/google/config"
 
 const friendly = (e: unknown) => {
@@ -19,7 +18,7 @@ const friendly = (e: unknown) => {
 
 export function SyncSection() {
   const { syncAccountId, googleEmail } = useJournalStore()
-  const { status, message, lastSyncTime, set } = useSyncStatus()
+  const { status, message, lastSyncTime } = useSyncStatus()
   const [busy, setBusy] = useState(false)
   if (!GOOGLE_CLIENT_ID) return null
 
@@ -42,8 +41,8 @@ export function SyncSection() {
     : "Not synced yet"
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium">Google Drive</h3>
+    <div className="space-y-3">
+      <h4 className="text-xs font-medium text-muted-foreground">Google Drive</h4>
       {!syncAccountId ? (
         <>
           <p className="text-xs text-muted-foreground">Back up and sync this journal across devices. Stored privately in your Drive's app folder.</p>
@@ -61,11 +60,8 @@ export function SyncSection() {
                 <RefreshCw className="w-4 h-4 mr-2" />Sync now
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={() => { googleAuth.signOut(); set("reauth") }}>
-              <LogOut className="w-4 h-4 mr-2" />Sign out
-            </Button>
           </div>
-          <p className="text-xs text-muted-foreground">Signing out keeps this journal linked to {googleEmail}. Signing in as a different account replaces it (a backup file is downloaded first).</p>
+          <p className="text-xs text-muted-foreground">Signing in as a different account replaces it (a backup file is downloaded first).</p>
         </>
       )}
     </div>

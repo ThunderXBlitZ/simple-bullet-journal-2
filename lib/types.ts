@@ -34,6 +34,7 @@ export interface Habit {
   name: string
   icon: string
   color: string
+  date?: string // optional YYYY-MM-DD; dated habit also shows in day/week/month views on that date
   order: number
   createdAt: string
   updatedAt: string
@@ -51,6 +52,7 @@ export interface Collection {
   name: string
   icon: string
   items: CollectionItem[]
+  order: number
   createdAt: string
   updatedAt: string
 }

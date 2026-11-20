@@ -22,8 +22,9 @@ export function upgradeLegacyState(s: any): { data: JournalData; settings: unkno
     tags: (s.tags ?? []).map((t: any) => ({ ...t, createdAt: t.createdAt ?? EPOCH, updatedAt: ts(t) })),
     habits: (s.habits ?? []).map((h: any, i: number) => ({ ...h, order: h.order ?? i, createdAt: h.createdAt ?? EPOCH, updatedAt: ts(h) })),
     habitCompletions: (s.habitCompletions ?? []).map((c: any) => ({ ...c, updatedAt: c.updatedAt ?? EPOCH })),
-    collections: (s.collections ?? []).map((c: any) => ({
+    collections: (s.collections ?? []).map((c: any, ci: number) => ({
       ...c,
+      order: c.order ?? ci,
       createdAt: c.createdAt ?? EPOCH,
       updatedAt: ts(c),
       items: (c.items ?? []).map((it: any, i: number) => ({ ...it, order: it.order ?? i, createdAt: it.createdAt ?? EPOCH, updatedAt: ts(it) })),

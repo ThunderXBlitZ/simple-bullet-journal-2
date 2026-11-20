@@ -18,6 +18,13 @@ import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
 import { getRandomQuote } from "@/lib/quotes"
 import { cn } from "@/lib/utils"
+import { DndContext, DragOverlay, type DragStartEvent, type DragEndEvent } from "@dnd-kit/core"
+import type { BulletEntry } from "@/lib/types"
+import { getHabitsForDate } from "@/lib/journal-helpers"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { BulletIcon } from "./bullet-icon"
+import { EntryDragChip, resolveEntryDrop, useEntrySensors, type EntryDragData } from "./entry-dnd"
+import { MonthlyDayCell, type DayData } from "./monthly-day-cell"
 
 interface MonthlyViewProps {
   onDateClick?: (date: Date) => void
@@ -26,7 +33,28 @@ interface MonthlyViewProps {
 export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [quote, setQuote] = useState(() => getRandomQuote())
-  const { getDailyLog, habits, habitCompletions, tags, userName } = useJournalStore()
+  const { getDailyLog, habits, habitCompletions, moveEntry, userName } = useJournalStore()
+  const sensors = useEntrySensors()
+  const [dragging, setDragging] = useState<BulletEntry | null>(null)
+  const [dialogDate, setDialogDate] = useState<string | null>(null)
+
+  const dayData = (dateStr: string): DayData => ({
+    dateStr,
+    entries: getDailyLog(dateStr).entries,
+    habits: getHabitsForDate(habits, dateStr).map((habit) => ({
+      habit,
+      done: habitCompletions.some((c) => c.habitId === habit.id && c.date === dateStr && c.completed),
+    })),
+    habitsDone: habitCompletions.filter((c) => c.date === dateStr && c.completed).length,
+  })
+
+  const onDragStart = (e: DragStartEvent) => setDragging((e.active.data.current as EntryDragData | undefined)?.entry ?? null)
+  const onDragEnd = (e: DragEndEvent) => {
+    setDragging(null)
+    const drop = resolveEntryDrop(e)
+    if (drop) moveEntry(drop.from, drop.to, drop.id)
+  }
+  const dialogData = dialogDate ? dayData(dialogDate) : null
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
@@ -89,80 +117,63 @@ export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
         </div>
 
         {/* Days */}
-        <div className="grid grid-cols-7 gap-1">
-          {days.map((day) => {
-            const dateStr = format(day, "yyyy-MM-dd")
-            const log = getDailyLog(dateStr)
-            const inMonth = isSameMonth(day, currentMonth)
-            const dayIsToday = isToday(day)
-            const taskCount = log.entries.filter((e) => e.type === "task").length
-            const completedCount = log.entries.filter((e) => e.type === "task" && e.status === "complete").length
-            const habitsCompleted = habitCompletions.filter((c) => c.date === dateStr && c.completed).length
+        <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
+          <div className="grid grid-cols-7 gap-1">
+            {days.map((day) => {
+              const dateStr = format(day, "yyyy-MM-dd")
+              return (
+                <MonthlyDayCell
+                  key={dateStr}
+                  day={day}
+                  data={dayData(dateStr)}
+                  inMonth={isSameMonth(day, currentMonth)}
+                  isToday={isToday(day)}
+                  onOpenDay={() => onDateClick?.(day)}
+                  onShowAll={() => setDialogDate(dateStr)}
+                />
+              )
+            })}
+          </div>
+          <DragOverlay>
+            <EntryDragChip entry={dragging} />
+          </DragOverlay>
+        </DndContext>
 
-            // Get first note entry
-            const firstNote = log.entries.find((e) => e.type === "note")
-            const firstNoteTag = firstNote?.tagIds?.[0] ? tags.find((t) => t.id === firstNote.tagIds?.[0]) : null
-
-            return (
-              <div
-                key={dateStr}
-                onClick={() => onDateClick?.(day)}
-                className={cn(
-                  "aspect-square p-1.5 border border-transparent rounded-lg transition-colors cursor-pointer",
-                  "flex flex-col",
-                  !inMonth && "opacity-30",
-                  dayIsToday && "border-primary bg-accent/30",
-                  inMonth && !dayIsToday && "hover:bg-accent/20",
-                )}
-              >
-                <span className={cn("text-sm font-serif", dayIsToday && "font-bold text-primary")}>
-                  {format(day, "d")}
-                </span>
-
-                {/* Note preview with tag color */}
-                {firstNote && (
-                  <div className="flex-1 flex items-start justify-between gap-0.5 min-h-0">
-                    <span className="text-xs text-muted-foreground truncate flex-1">{firstNote.content}</span>
-                    {firstNoteTag && (
-                      <div
-                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: firstNoteTag.color }}
-                        title={firstNoteTag.name}
-                      />
-                    )}
-                  </div>
-                )}
-
-                {/* Indicators */}
-                <div className="flex-1 flex flex-col justify-end gap-0.5">
-                  {/* Task progress */}
-                  {taskCount > 0 && (
-                    <div className="flex gap-0.5">
-                      {Array.from({ length: Math.min(taskCount, 5) }).map((_, i) => (
-                        <div
-                          key={i}
-                          className={cn(
-                            "w-1 h-1 rounded-full",
-                            i < completedCount ? "bg-bullet-complete" : "bg-muted-foreground/30",
-                          )}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Habit indicators */}
-                  {habitsCompleted > 0 && (
-                    <div className="flex gap-0.5">
-                      {Array.from({ length: Math.min(habitsCompleted, 5) }).map((_, i) => (
-                        <div key={i} className="w-1 h-1 rounded-full bg-habit-complete" />
-                      ))}
-                    </div>
-                  )}
+        <Dialog open={!!dialogData} onOpenChange={(o) => !o && setDialogDate(null)}>
+          <DialogContent className="max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-serif">{dialogDate && format(new Date(`${dialogDate}T00:00:00`), "EEEE, MMM d")}</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-2">
+              {dialogData?.entries.map((e) => (
+                <div key={e.id} className="flex items-start gap-2 font-serif text-sm">
+                  <BulletIcon type={e.type} status={e.status} />
+                  <span className="whitespace-pre-wrap break-words min-w-0">{e.title || e.content}</span>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              ))}
+              {dialogData?.habits.map(({ habit, done }) => (
+                <div key={habit.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="text-habit-complete w-3.5 text-center">{done ? "✓" : "◇"}</span>
+                  <span>{habit.name}</span>
+                </div>
+              ))}
+              {dialogData && dialogData.entries.length + dialogData.habits.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nothing logged.</p>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 self-start bg-transparent"
+                onClick={() => {
+                  if (dialogDate) onDateClick?.(new Date(`${dialogDate}T00:00:00`))
+                  setDialogDate(null)
+                }}
+              >
+                Open day
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Inspiration Quote */}
         <div className="py-2 border-t border-border text-center">
@@ -174,15 +185,8 @@ export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
           <span>• Task</span>
           <span>○ Event</span>
           <span>— Note</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <div className="flex gap-0.5">
-              <div className="w-2 h-2 rounded-full bg-bullet-complete" />
-              <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
-            </div>
-            <span>Tasks</span>
-          </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-habit-complete" />
+            <span className="text-habit-complete">✓</span>
             <span>Habits</span>
           </div>
         </div>

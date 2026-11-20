@@ -2,25 +2,20 @@
 
 import { useState } from "react"
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, addMonths, isToday } from "date-fns"
-import { ChevronLeft, ChevronRight, Plus, Trash2, Flame } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Trash2, Flame, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { HabitForm } from "./habit-form"
+import { SortableItem, SortableList } from "./sortable"
 import { useJournalStore } from "@/lib/journal-store"
 import { getRandomQuote } from "@/lib/quotes"
 import { cn } from "@/lib/utils"
 
-const defaultIcons = ["📚", "💪", "🧘", "💧", "🏃", "✍️", "🎯", "💤"]
-const defaultColors = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"]
-
 export function HabitTracker() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [isAdding, setIsAdding] = useState(false)
-  const [newHabitName, setNewHabitName] = useState("")
-  const [selectedIcon, setSelectedIcon] = useState(defaultIcons[0])
-  const [selectedColor, setSelectedColor] = useState(defaultColors[0])
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [quote, setQuote] = useState(() => getRandomQuote())
-  const { habits, habitCompletions, addHabit, deleteHabit, toggleHabitCompletion, getHabitStreak, reorderHabits, userName } = useJournalStore()
+  const { habits, habitCompletions, addHabit, updateHabit, deleteHabit, toggleHabitCompletion, getHabitStreak, reorderHabits, userName } = useJournalStore()
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
@@ -39,41 +34,7 @@ export function HabitTracker() {
     setQuote(getRandomQuote())
   }
 
-  const handleAddHabit = () => {
-    if (newHabitName.trim()) {
-      addHabit(newHabitName.trim(), selectedIcon, selectedColor)
-      setNewHabitName("")
-      setIsAdding(false)
-    }
-  }
-
-  const handleHabitDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.effectAllowed = "move"
-    e.dataTransfer.setData("text/plain", index.toString())
-  }
-
-  const handleHabitDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = "move"
-    setDragOverIndex(index)
-  }
-
-  const handleHabitDragLeave = () => {
-    setDragOverIndex(null)
-  }
-
-  const handleHabitDrop = (e: React.DragEvent, toIndex: number) => {
-    e.preventDefault()
-    setDragOverIndex(null)
-    const fromIndex = parseInt(e.dataTransfer.getData("text/plain"), 10)
-    if (fromIndex !== toIndex) {
-      reorderHabits(fromIndex, toIndex)
-    }
-  }
-
-  const handleHabitDragEnd = () => {
-    setDragOverIndex(null)
-  }
+  const editingHabit = habits.find((h) => h.id === editingId)
 
   const isHabitComplete = (habitId: string, date: string) => {
     return habitCompletions.some((c) => c.habitId === habitId && c.date === date && c.completed)
@@ -111,75 +72,33 @@ export function HabitTracker() {
         </div>
       </div>
 
-      {/* Add Habit Input */}
+      {/* Add / Edit Habit */}
       <div className="px-0 py-2 border-b border-dashed border-border space-y-3">
-        <Input
-          value={newHabitName}
-          onChange={(e) => setNewHabitName(e.target.value)}
-          placeholder="Habit name..."
-          className="font-serif"
-          autoFocus={isAdding}
-          onFocus={() => setIsAdding(true)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleAddHabit()
-            if (e.key === "Escape") {
-              setNewHabitName("")
+        {isAdding ? (
+          <HabitForm
+            submitLabel="Add Habit"
+            onCancel={() => setIsAdding(false)}
+            onSubmit={(d) => {
+              addHabit(d.name, d.icon, d.color, d.date)
               setIsAdding(false)
-            }
-          }}
-        />
-
-        {newHabitName.trim() && (
-          <>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-muted-foreground">Icon:</span>
-              <div className="flex gap-1">
-                {defaultIcons.map((icon) => (
-                  <button
-                    key={icon}
-                    onClick={() => setSelectedIcon(icon)}
-                    className={cn(
-                      "w-8 h-8 rounded flex items-center justify-center transition-colors",
-                      selectedIcon === icon ? "bg-accent" : "hover:bg-accent/50",
-                    )}
-                  >
-                    {icon}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-muted-foreground">Color:</span>
-              <div className="flex gap-1">
-                {defaultColors.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setSelectedColor(color)}
-                    className={cn(
-                      "w-6 h-6 rounded-full transition-transform",
-                      selectedColor === color &&
-                        "ring-2 ring-offset-2 ring-offset-background ring-foreground/30 scale-110",
-                    )}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleAddHabit}>
-                <Plus className="w-3 h-3 mr-1" />
-                Add Habit
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => {
-                setNewHabitName("")
-                setIsAdding(false)
-              }}>
-                Cancel
-              </Button>
-            </div>
-          </>
+            }}
+          />
+        ) : editingHabit ? (
+          <HabitForm
+            key={editingHabit.id}
+            initial={editingHabit}
+            submitLabel="Save"
+            onCancel={() => setEditingId(null)}
+            onSubmit={(d) => {
+              updateHabit(editingHabit.id, d)
+              setEditingId(null)
+            }}
+          />
+        ) : (
+          <Button size="sm" variant="outline" onClick={() => setIsAdding(true)}>
+            <Plus className="w-3 h-3 mr-1" />
+            New habit
+          </Button>
         )}
       </div>
 
@@ -195,6 +114,7 @@ export function HabitTracker() {
           <div className="min-w-[600px]">
             {/* Day headers */}
             <div className="flex items-center gap-1 mb-2">
+              <div className="w-5" />
               <div className="w-40" />
               {days.map((day) => (
                 <div
@@ -209,31 +129,26 @@ export function HabitTracker() {
               ))}
               <div className="w-20 text-center text-xs text-muted-foreground">Rate</div>
               <div className="w-16 text-center text-xs text-muted-foreground">Streak</div>
-              <div className="w-8" />
+              <div className="w-14" />
             </div>
 
             {/* Habits */}
-            {habits.map((habit, index) => {
+            <SortableList ids={habits.map((h) => h.id)} onReorder={reorderHabits}>
+            {habits.map((habit) => {
               const streak = getHabitStreak(habit.id)
               const rate = getCompletionRate(habit.id)
 
               return (
-                <div
+                <SortableItem
                   key={habit.id}
-                  draggable
-                  onDragStart={(e) => handleHabitDragStart(e, index)}
-                  onDragOver={(e) => handleHabitDragOver(e, index)}
-                  onDragLeave={handleHabitDragLeave}
-                  onDrop={(e) => handleHabitDrop(e, index)}
-                  onDragEnd={handleHabitDragEnd}
-                  className={cn(
-                    "flex items-center gap-1 mb-1 group transition-colors cursor-grab active:cursor-grabbing",
-                    dragOverIndex === index && "bg-accent/50 border-l-2 border-primary"
-                  )}
+                  id={habit.id}
+                  className="flex items-center gap-1 mb-1 group bg-background"
+                  handleClassName="w-5"
                 >
                   <div className="w-40 flex items-center gap-2 pr-2 truncate">
                     <span>{habit.icon}</span>
-                    <span className="font-serif text-sm truncate">{habit.name}</span>
+                    <span className="font-serif text-sm truncate" title={habit.date ? `${habit.name} · ${habit.date}` : habit.name}>{habit.name}</span>
+                    {habit.date && <span className="text-[10px] font-mono text-muted-foreground border border-border rounded px-1">{habit.date.slice(5)}</span>}
                   </div>
 
                   {days.map((day) => {
@@ -278,15 +193,29 @@ export function HabitTracker() {
                     )}
                   </div>
 
-                  <button
-                    onClick={() => deleteHabit(habit.id)}
-                    className="w-8 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                  <div className="w-14 flex opacity-60 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => {
+                        setIsAdding(false)
+                        setEditingId(habit.id)
+                      }}
+                      className="p-1 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
+                      aria-label="Edit habit"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => deleteHabit(habit.id)}
+                      className="p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive"
+                      aria-label="Delete habit"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </SortableItem>
               )
             })}
+            </SortableList>
           </div>
         )}
 

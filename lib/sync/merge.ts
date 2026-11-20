@@ -84,7 +84,7 @@ export function mergeJournals(a: JournalData, b: JournalData, now: number = Date
       ...c,
       items: byOrder(live(mergeById(colA.get(c.id)?.items ?? [], colB.get(c.id)?.items ?? []), tombstones)),
     }))
-    .sort((x, y) => x.createdAt.localeCompare(y.createdAt) || x.id.localeCompare(y.id))
+    .sort((x, y) => (x.order ?? 1e9) - (y.order ?? 1e9) || x.createdAt.localeCompare(y.createdAt) || x.id.localeCompare(y.id))
 
   const nameWinner =
     a.userNameUpdatedAt !== b.userNameUpdatedAt

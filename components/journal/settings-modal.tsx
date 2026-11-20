@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -12,6 +12,7 @@ import { googleAuth } from "@/lib/google/auth"
 import { SyncSection } from "./sync-section"
 import { BackupSection } from "./backup-section"
 import { toast } from "sonner"
+import { downloadBackup } from "@/lib/backup"
 
 interface SettingsModalProps {
   open: boolean
@@ -20,7 +21,8 @@ interface SettingsModalProps {
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const { theme, setTheme } = useTheme()
-  const { userName, setUserName, resetStore, settings, toggleSetting, setZoom } = useJournalStore()
+  const { userName, setUserName, resetStore, settings, toggleSetting, setZoom, syncAccountId } = useJournalStore()
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [nameInput, setNameInput] = useState(userName)
 
   useEffect(() => {
@@ -39,8 +41,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   }
 
   const handleLogout = () => {
-    googleAuth.signOut()
-    resetStore()
+    if (syncAccountId) googleAuth.signOut() // linked: revoke Google session; guest: nothing to revoke
+    resetStore() // clears local journal + link in both cases
+    setConfirmOpen(false)
     onOpenChange(false)
     toast.success("Logged out")
   }
@@ -52,7 +55,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           <DialogTitle className="font-serif text-2xl">Settings</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-7">
           {/* Your Name */}
           <div className="space-y-2">
             <label className="text-sm font-medium font-serif">Your Name</label>
@@ -76,86 +79,79 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
           <Separator />
 
-          {/* Journal display */}
+          {/* Display: focus, zoom, theme in one row */}
           <div className="space-y-3">
-            <label className="text-sm font-medium font-serif">Journal Display</label>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => toggleSetting("focusMode")}
-              className="w-full justify-start gap-2"
-            >
-              {settings.focusMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-              {settings.focusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
-            </Button>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Zoom</span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setZoom(settings.zoomLevel - 0.1)}
-                  aria-label="Zoom out"
-                >
+            <label className="text-sm font-medium font-serif">Display</label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant={settings.focusMode ? "default" : "outline"}
+                size="icon"
+                onClick={() => toggleSetting("focusMode")}
+                aria-label={settings.focusMode ? "Exit focus mode" : "Enter focus mode"}
+                title="Focus mode"
+              >
+                {settings.focusMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </Button>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="icon" onClick={() => setZoom(settings.zoomLevel - 0.1)} aria-label="Zoom out">
                   <Minus className="w-4 h-4" />
                 </Button>
                 <span className="w-12 text-center text-sm">{Math.round(settings.zoomLevel * 100)}%</span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setZoom(settings.zoomLevel + 0.1)}
-                  aria-label="Zoom in"
-                >
+                <Button variant="outline" size="icon" onClick={() => setZoom(settings.zoomLevel + 0.1)} aria-label="Zoom in">
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Theme */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium font-serif">Appearance</label>
-            <div className="flex gap-2">
               <Button
-                variant={theme === "light" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTheme("light")}
-                className="flex items-center gap-2"
+                variant="outline"
+                size="icon"
+                className="ml-auto"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                aria-label="Toggle dark mode"
+                title="Dark / light"
               >
-                <Sun className="w-4 h-4" />
-                Light
-              </Button>
-              <Button
-                variant={theme === "dark" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTheme("dark")}
-                className="flex items-center gap-2"
-              >
-                <Moon className="w-4 h-4" />
-                Dark
+                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </Button>
             </div>
           </div>
 
           <Separator />
 
-          <SyncSection />
-
-          <Separator />
-
-          <BackupSection />
+          {/* Data: sync + backup */}
+          <div className="space-y-4">
+            <label className="text-sm font-medium font-serif">Data</label>
+            <SyncSection />
+            <BackupSection />
+          </div>
 
           <Separator />
 
           {/* Logout */}
-          <Button onClick={handleLogout} variant="destructive" className="w-full">
+          <Button onClick={() => setConfirmOpen(true)} variant="destructive" className="w-full">
             <LogOut className="w-4 h-4 mr-2" />
-            Logout
+            Log out
           </Button>
         </div>
       </DialogContent>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Log out?</DialogTitle>
+            <DialogDescription>
+              {syncAccountId
+                ? "Your journal stays safe in Google Drive. Local data on this device will be cleared; sign in again to restore it."
+                : "You are not linked to Google. Logging out will permanently delete all journal data on this device."}
+            </DialogDescription>
+          </DialogHeader>
+          {!syncAccountId && (
+            <Button variant="outline" onClick={downloadBackup}>Export backup first</Button>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleLogout}>Log out</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }

@@ -9,14 +9,11 @@ import {
   CalendarRange,
   CheckSquare,
   List,
-  Moon,
-  Sun,
   Menu,
   ChevronLeft,
   Command,
   Settings,
 } from "lucide-react"
-import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
 import { cn } from "@/lib/utils"
@@ -40,20 +37,13 @@ const navItems: { id: View; label: string; icon: React.ReactNode }[] = [
 ]
 
 export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettings, className }: SidebarProps) {
-  const { theme, setTheme } = useTheme()
   const { collections, userName } = useJournalStore()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [currentMonth, setCurrentMonth] = useState("")
-  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     setCurrentMonth(format(new Date(), "MMMM yyyy"))
-    setIsMounted(true)
   }, [])
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark")
-  }
 
   return (
     <aside
@@ -81,7 +71,7 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-2 space-y-1">
+      <nav className="flex-1 p-3 space-y-2">
         {navItems.map((item) => (
           <Button
             key={item.id}
@@ -110,7 +100,7 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
       </nav>
 
       {/* Footer Actions */}
-      <div className="p-2 border-t border-sidebar-border space-y-1">
+      <div className="p-3 border-t border-sidebar-border space-y-2">
         <Button
           variant="ghost"
           className={cn("w-full justify-start gap-3 text-sidebar-foreground text-sm", isCollapsed && "justify-center")}
@@ -124,17 +114,6 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
             </>
           )}
         </Button>
-
-        {isMounted && (
-          <Button
-            variant="ghost"
-            className={cn("w-full justify-start gap-3 text-sidebar-foreground text-sm", isCollapsed && "justify-center")}
-            onClick={toggleTheme}
-          >
-            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            {!isCollapsed && <span className="font-serif">{theme === "dark" ? "Light" : "Dark"}</span>}
-          </Button>
-        )}
 
         <Button
           variant="ghost"

@@ -6,7 +6,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
 import { getRandomQuote } from "@/lib/quotes"
-import { EntryItem } from "./entry-item"
+import { DndContext, DragOverlay, type DragStartEvent, type DragEndEvent } from "@dnd-kit/core"
+import type { BulletEntry } from "@/lib/types"
+import { getHabitsForDate } from "@/lib/journal-helpers"
+import { DraggableEntry, DroppableDay, EntryDragChip, resolveEntryDrop, useEntrySensors, type EntryDragData } from "./entry-dnd"
 import { cn } from "@/lib/utils"
 
 interface WeeklyViewProps {
@@ -16,7 +19,16 @@ interface WeeklyViewProps {
 export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [quote, setQuote] = useState(() => getRandomQuote())
-  const { getDailyLog, updateEntry, deleteEntry, cycleStatus, userName } = useJournalStore()
+  const { getDailyLog, updateEntry, deleteEntry, cycleStatus, moveEntry, habits, habitCompletions, userName } = useJournalStore()
+  const sensors = useEntrySensors()
+  const [dragging, setDragging] = useState<BulletEntry | null>(null)
+
+  const onDragStart = (e: DragStartEvent) => setDragging((e.active.data.current as EntryDragData | undefined)?.entry ?? null)
+  const onDragEnd = (e: DragEndEvent) => {
+    setDragging(null)
+    const drop = resolveEntryDrop(e)
+    if (drop) moveEntry(drop.from, drop.to, drop.id)
+  }
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
@@ -62,6 +74,7 @@ export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
 
       {/* Week Grid */}
       <div className="flex-1 overflow-y-auto py-4 flex flex-col">
+        <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6">
           {days.map((day) => {
             const dateStr = format(day, "yyyy-MM-dd")
@@ -69,11 +82,12 @@ export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
             const dayIsToday = isToday(day)
 
             return (
-              <button
+              <DroppableDay
                 key={dateStr}
+                date={dateStr}
                 onClick={() => onDateClick?.(day)}
                 className={cn(
-                  "border border-border rounded-lg p-3 min-h-[200px] flex flex-col text-left transition-colors hover:bg-accent/10",
+                  "cursor-pointer border border-border rounded-lg p-3 min-h-[200px] flex flex-col text-left transition-colors hover:bg-accent/10",
                   dayIsToday && "border-primary/50 bg-accent/30",
                 )}
               >
@@ -89,7 +103,7 @@ export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
 
                 <div className="flex-1 space-y-0.5 text-sm overflow-y-auto">
                   {log.entries.slice(0, 5).map((entry) => (
-                    <EntryItem
+                    <DraggableEntry
                       key={entry.id}
                       entry={entry}
                       date={dateStr}
@@ -97,16 +111,30 @@ export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
                       onDelete={() => deleteEntry(dateStr, entry.id)}
                       onCycleStatus={() => cycleStatus(dateStr, entry.id)}
                       readonly={true}
+                      compact
                     />
                   ))}
+                  {getHabitsForDate(habits, dateStr).map((h) => {
+                    const done = habitCompletions.some((c) => c.habitId === h.id && c.date === dateStr && c.completed)
+                    return (
+                      <div key={h.id} className="flex items-center gap-1.5 text-xs text-muted-foreground px-1">
+                        <span className={cn("w-1.5 h-1.5 rounded-full border border-habit-complete", done && "bg-habit-complete")} />
+                        <span className={cn("truncate", done && "line-through")}>{h.name}</span>
+                      </div>
+                    )
+                  })}
                   {log.entries.length > 5 && (
                     <span className="text-xs text-muted-foreground">+{log.entries.length - 5} more</span>
                   )}
                 </div>
-              </button>
+              </DroppableDay>
             )
           })}
         </div>
+        <DragOverlay>
+          <EntryDragChip entry={dragging} />
+        </DragOverlay>
+        </DndContext>
 
         {/* Inspiration Quote */}
         <div className="py-2 border-t border-border text-center">

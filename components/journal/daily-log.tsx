@@ -8,8 +8,11 @@ import { useJournalStore } from "@/lib/journal-store"
 import { getRandomQuote } from "@/lib/quotes"
 import type { BulletType } from "@/lib/types"
 import { EntryInput } from "./entry-input"
-import { EntryItem } from "./entry-item"
+import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
+import { SortableEntry, useEntrySensors } from "./entry-dnd"
 import { cn } from "@/lib/utils"
+import { getHabitsForDate } from "@/lib/journal-helpers"
 
 interface DailyLogProps {
   className?: string
@@ -31,9 +34,20 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
     settings,
     reorderEntries,
     userName,
+    habits,
+    habitCompletions,
+    toggleHabitCompletion,
   } = useJournalStore()
 
   const dailyLog = getDailyLog(dateStr)
+  const dayHabits = getHabitsForDate(habits, dateStr)
+  const sensors = useEntrySensors()
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return
+    const ids = dailyLog.entries.map((e) => e.id)
+    reorderEntries(dateStr, ids.indexOf(String(active.id)), ids.indexOf(String(over.id)))
+  }
 
   const goToToday = () => {
     setCurrentDate(new Date())
@@ -109,33 +123,54 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
       </div>
 
       {/* Input Section */}
-      <div className="px-0 py-2 border-b border-dashed border-border">
+      <div className="px-0 py-4 border-b border-dashed border-border">
         <EntryInput onSubmit={handleAddEntry} />
       </div>
 
       {/* Entries */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden pb-4">
-        {dailyLog.entries.length === 0 ? (
+        {dailyLog.entries.length === 0 && dayHabits.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
             <div className="text-6xl mb-4 font-mono">^_^</div>
             <p className="text-lg font-serif">{quote}</p>
             <p className="text-xs text-muted-foreground/60">Start logging your day above</p>
           </div>
         ) : (
-          <div className="space-y-0.5 pt-2">
-            {dailyLog.entries.map((entry, index) => (
-              <EntryItem
-                key={entry.id}
-                entry={entry}
-                date={dateStr}
-                index={index}
-                onUpdate={(updates) => updateEntry(dateStr, entry.id, updates)}
-                onDelete={() => deleteEntry(dateStr, entry.id)}
-                onCycleStatus={() => cycleStatus(dateStr, entry.id)}
-                onReorder={(fromIndex, toIndex) => reorderEntries(dateStr, fromIndex, toIndex)}
-              />
-            ))}
-          </div>
+          <>
+          {dayHabits.length > 0 && (
+            <div className="space-y-1 pt-4">
+              {dayHabits.map((h) => {
+                const done = habitCompletions.some((c) => c.habitId === h.id && c.date === dateStr && c.completed)
+                return (
+                  <button
+                    key={h.id}
+                    onClick={() => toggleHabitCompletion(h.id, dateStr)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground px-1 py-1 w-full text-left hover:bg-accent/20 rounded-sm"
+                  >
+                    <span className={cn("w-3 h-3 rounded-full border border-habit-complete", done && "bg-habit-complete")} />
+                    <span className={cn("truncate", done && "line-through")}>{h.icon} {h.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={dailyLog.entries.map((e) => e.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2 pt-4">
+                {dailyLog.entries.map((entry) => (
+                  <SortableEntry
+                    key={entry.id}
+                    entry={entry}
+                    date={dateStr}
+                    onUpdate={(updates) => updateEntry(dateStr, entry.id, updates)}
+                    onDelete={() => deleteEntry(dateStr, entry.id)}
+                    onCycleStatus={() => cycleStatus(dateStr, entry.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+          </>
         )}
       </div>
 

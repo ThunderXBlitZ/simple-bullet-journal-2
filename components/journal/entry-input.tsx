@@ -6,6 +6,7 @@ import { BulletIcon } from "./bullet-icon"
 import { TagSelector } from "./tag-selector"
 import { cn } from "@/lib/utils"
 import { Check } from "lucide-react"
+import { randomPlaceholder } from "@/lib/placeholders"
 
 interface EntryInputProps {
   onSubmit: (type: BulletType, content: string, indent: number, tagIds?: string[], title?: string) => void
@@ -33,6 +34,10 @@ export function EntryInput({
   const [content, setContent] = useState(initialContent)
   const [indent, setIndent] = useState(initialIndent)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+  const [titlePlaceholder, setTitlePlaceholder] = useState(placeholder ?? "")
+  useEffect(() => {
+    if (!placeholder) setTitlePlaceholder(randomPlaceholder())
+  }, [placeholder])
   const titleRef = useRef<HTMLInputElement>(null)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
 
@@ -77,7 +82,7 @@ export function EntryInput({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="What are you grateful for today?"
+            placeholder={titlePlaceholder}
             className="bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 font-serif text-base font-semibold"
           />
 
