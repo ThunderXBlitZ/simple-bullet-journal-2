@@ -5,7 +5,7 @@ import type { BulletType } from "@/lib/types"
 import { BulletIcon } from "./bullet-icon"
 import { TagSelector } from "./tag-selector"
 import { cn } from "@/lib/utils"
-import { Check } from "lucide-react"
+import { CheckIcon } from "@/components/icons/check"
 import { randomPlaceholder } from "@/lib/placeholders"
 
 interface EntryInputProps {
@@ -113,7 +113,7 @@ export function EntryInput({
             )}
             title="Save entry"
           >
-            <Check className="w-4 h-4" />
+            <CheckIcon size={16} />
           </button>
         )}
       </div>

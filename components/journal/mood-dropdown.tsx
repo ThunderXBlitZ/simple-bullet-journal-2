@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { ChevronDown } from "lucide-react"
+import { ChevronDownIcon } from "@/components/icons/chevron-down"
 import { cn } from "@/lib/utils"
 
 interface MoodDropdownProps {
@@ -49,7 +49,7 @@ export function MoodDropdown({ value, onChange }: MoodDropdownProps) {
           </>
         )}
         {!currentMood && <span className="text-sm text-muted-foreground font-serif">Mood</span>}
-        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        <ChevronDownIcon size={16} className="text-muted-foreground" />
       </button>
 
       {isOpen && (

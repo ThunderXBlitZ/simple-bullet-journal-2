@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Trash2 } from "lucide-react"
+import { Trash2 } from "lucide-react"
+import { PlusIcon } from "@/components/icons/plus"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useJournalStore } from "@/lib/journal-store"
@@ -94,7 +95,7 @@ export function CollectionsView({ initialCollectionId = null }: { initialCollect
 
             <div className="flex gap-2">
               <Button size="sm" onClick={() => handleAddCollection()}>
-                <Plus className="w-3 h-3 mr-1" />
+                <PlusIcon size={12} className="mr-1" />
                 Create
               </Button>
               <Button size="sm" variant="ghost" onClick={() => {

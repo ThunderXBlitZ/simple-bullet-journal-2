@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react"
 import { format, addDays, subDays, isToday } from "date-fns"
-import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react"
+import { ChevronLeftIcon } from "@/components/icons/chevron-left"
+import { ChevronRightIcon } from "@/components/icons/chevron-right"
+import { ArrowRightIcon } from "@/components/icons/arrow-right"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
 import { useShallow } from "zustand/react/shallow"
@@ -86,7 +88,7 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
 
           {showMigrate && (
             <Button variant="outline" size="sm" onClick={handleMigrate} className="text-xs bg-transparent flex-shrink-0">
-              <ArrowRight className="w-3 h-3 mr-1" />
+              <ArrowRightIcon size={12} className="mr-1" />
               <span className="hidden sm:inline">Migrate</span>
               <span className="sm:hidden">{incompleteTasks.length}</span>
             </Button>
@@ -94,7 +96,7 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
 
           <div className="flex items-center gap-1 md:gap-2 ml-auto shrink-0">
             <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goPrevDay}>
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeftIcon size={16} />
             </Button>
             <Button
               variant="ghost"
@@ -107,7 +109,7 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
               )}
             </Button>
             <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goNextDay}>
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRightIcon size={16} />
             </Button>
           </div>
         </div>

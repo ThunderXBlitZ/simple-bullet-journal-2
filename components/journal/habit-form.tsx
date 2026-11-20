@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus } from "lucide-react"
+import { PlusIcon } from "@/components/icons/plus"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { randomPlaceholder } from "@/lib/placeholders"
@@ -88,7 +88,7 @@ export function HabitForm({ initial, submitLabel, onSubmit, onCancel }: HabitFor
       </div>
       <div className="flex gap-2">
         <Button size="sm" onClick={submit}>
-          <Plus className="w-3 h-3 mr-1" />
+          <PlusIcon size={12} className="mr-1" />
           {submitLabel}
         </Button>
         <Button size="sm" variant="ghost" onClick={onCancel}>

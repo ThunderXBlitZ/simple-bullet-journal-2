@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react"
 import { format, startOfWeek, addDays, subWeeks, addWeeks, isToday } from "date-fns"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeftIcon } from "@/components/icons/chevron-left"
+import { ChevronRightIcon } from "@/components/icons/chevron-right"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
 import { useShallow } from "zustand/react/shallow"
@@ -59,7 +60,7 @@ export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
 
           <div className="flex items-center gap-1 md:gap-2 ml-auto shrink-0">
             <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goPrevWeek}>
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeftIcon size={16} />
             </Button>
             <Button
               variant="ghost"
@@ -69,7 +70,7 @@ export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
               Week of {format(weekStart, "MMM d")}
             </Button>
             <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goNextWeek}>
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRightIcon size={16} />
             </Button>
           </div>
         </div>

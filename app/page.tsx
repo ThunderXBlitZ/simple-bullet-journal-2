@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X } from "lucide-react"
+import { XIcon } from "@/components/icons/x"
 import { Sidebar } from "@/components/journal/sidebar"
 import { MobileNav } from "@/components/journal/mobile-nav"
 import { DailyLog } from "@/components/journal/daily-log"
@@ -63,7 +63,6 @@ export default function Home() {
       } catch {
         return // offline / blocked: local-only until next load
       }
-      await googleAuth.restore()
       if (cancelled) return
       stop = startAutoSync()
       if (useJournalStore.getState().syncAccountId) void syncNow()
@@ -180,7 +179,7 @@ export default function Home() {
           title="Exit focus mode"
           aria-label="Exit Focus Mode"
         >
-          <X className="w-6 h-6" />
+          <XIcon size={24} />
         </button>
       )}
 

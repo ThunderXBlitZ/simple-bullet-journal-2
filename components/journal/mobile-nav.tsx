@@ -1,7 +1,11 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { CalendarDays, CheckSquare, ChevronDown, List, Search, Settings } from "lucide-react"
+import { CheckSquare, List } from "lucide-react"
+import { SearchIcon } from "@/components/icons/search"
+import { SettingsIcon } from "@/components/icons/settings"
+import { CalendarDaysIcon } from "@/components/icons/calendar-days"
+import { ChevronDownIcon } from "@/components/icons/chevron-down"
 
 type View = "daily" | "weekly" | "monthly" | "habits" | "collections"
 
@@ -39,7 +43,7 @@ export function MobileNav({ currentView, onViewChange, onOpenCommand, onOpenSett
         className="fixed bottom-24 right-4 bg-primary text-primary-foreground p-3 rounded-full shadow-lg hover:bg-primary/90 transition-colors md:hidden z-40"
         title="Search"
       >
-        <Search className="w-5 h-5" />
+        <SearchIcon size={20} />
       </button>
 
       {/* Bottom Navigation */}
@@ -53,9 +57,9 @@ export function MobileNav({ currentView, onViewChange, onOpenCommand, onOpenSett
               aria-haspopup="menu"
               aria-expanded={viewsOpen}
             >
-              <CalendarDays className="h-5 w-5" />
+              <CalendarDaysIcon size={20} />
               <span className="flex items-center gap-0.5 font-serif">
-                {selectedView?.label ?? "Daily"}<ChevronDown className="h-3 w-3" />
+                {selectedView?.label ?? "Daily"}<ChevronDownIcon size={12} />
               </span>
             </button>
             {viewsOpen && (
@@ -98,7 +102,7 @@ export function MobileNav({ currentView, onViewChange, onOpenCommand, onOpenSett
             className="flex flex-col items-center gap-0.5 p-2 rounded-lg transition-colors min-w-[50px] text-muted-foreground hover:text-foreground"
             aria-label="Settings"
           >
-            <Settings className="w-5 h-5" />
+            <SettingsIcon size={20} />
             <span className="text-xs font-serif">Settings</span>
           </button>
         </div>

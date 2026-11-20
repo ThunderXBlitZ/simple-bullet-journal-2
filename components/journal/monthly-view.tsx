@@ -13,7 +13,10 @@ import {
   startOfWeek,
   endOfWeek,
 } from "date-fns"
-import { ChevronLeft, ChevronRight, Check, Diamond } from "lucide-react"
+import { Diamond } from "lucide-react"
+import { ChevronLeftIcon } from "@/components/icons/chevron-left"
+import { ChevronRightIcon } from "@/components/icons/chevron-right"
+import { CheckIcon } from "@/components/icons/check"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
 import { useShallow } from "zustand/react/shallow"
@@ -92,7 +95,7 @@ export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
 
           <div className="flex items-center gap-1 md:gap-2 ml-auto shrink-0">
             <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goPrevMonth}>
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeftIcon size={16} />
             </Button>
             <Button
               variant="ghost"
@@ -102,7 +105,7 @@ export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
               {format(currentMonth, "MMMM yyyy")}
             </Button>
             <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goNextMonth}>
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRightIcon size={16} />
             </Button>
           </div>
         </div>
@@ -156,7 +159,7 @@ export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
               ))}
               {dialogData?.habits.map(({ habit, done }) => (
                 <div key={habit.id} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="text-habit-complete w-3.5 text-center">{done ? <Check className="size-3" /> : <Diamond className="size-3" />}</span>
+                  <span className="text-habit-complete w-3.5 text-center">{done ? <CheckIcon size={12} /> : <Diamond className="size-3" />}</span>
                   <span>{habit.name}</span>
                 </div>
               ))}
@@ -189,7 +192,7 @@ export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
           <span>○ Event</span>
           <span>— Note</span>
           <div className="flex items-center gap-2">
-            <Check className="size-3 text-habit-complete" />
+            <CheckIcon size={12} className="text-habit-complete" />
             <span>Habits</span>
           </div>
         </div>

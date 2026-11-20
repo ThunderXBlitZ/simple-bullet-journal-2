@@ -2,7 +2,11 @@
 
 import { useMemo, useState } from "react"
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, addMonths, isToday } from "date-fns"
-import { ChevronLeft, ChevronRight, Plus, Trash2, Flame, Pencil } from "lucide-react"
+import { Trash2, Pencil } from "lucide-react"
+import { ChevronLeftIcon } from "@/components/icons/chevron-left"
+import { ChevronRightIcon } from "@/components/icons/chevron-right"
+import { PlusIcon } from "@/components/icons/plus"
+import { FlameIcon } from "@/components/icons/flame"
 import { Button } from "@/components/ui/button"
 import { HabitForm } from "./habit-form"
 import { SortableItem, SortableList } from "./sortable"
@@ -58,7 +62,7 @@ export function HabitTracker() {
 
           <div className="flex items-center gap-1 md:gap-2 ml-auto shrink-0">
             <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goPrevMonth}>
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeftIcon size={16} />
             </Button>
             <Button
               variant="ghost"
@@ -68,7 +72,7 @@ export function HabitTracker() {
               {format(currentMonth, "MMMM yyyy")}
             </Button>
             <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goNextMonth}>
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRightIcon size={16} />
             </Button>
           </div>
         </div>
@@ -98,7 +102,7 @@ export function HabitTracker() {
           />
         ) : (
           <Button size="sm" variant="outline" onClick={() => setIsAdding(true)}>
-            <Plus className="w-3 h-3 mr-1" />
+            <PlusIcon size={12} className="mr-1" />
             New habit
           </Button>
         )}
@@ -189,7 +193,7 @@ export function HabitTracker() {
                   <div className="w-16 shrink-0 flex items-center justify-center gap-1 text-sm">
                     {streak > 0 && (
                       <>
-                        <Flame className="w-3 h-3 text-orange-500" />
+                        <FlameIcon size={12} className="text-orange-500" />
                         <span className="font-mono">{streak}</span>
                       </>
                     )}

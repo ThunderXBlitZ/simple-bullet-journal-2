@@ -12,8 +12,6 @@ export interface AuthProvider {
   signIn(hint?: string): Promise<AuthUser>
   /** Background token refresh, no UI. If `accountId` is given, a token for a different account is rejected. */
   silentRefresh(opts?: { hint?: string; accountId?: string }): Promise<boolean>
-  /** Restore a still-valid persisted token on startup. */
-  restore(): Promise<void>
   /** Current token, or null if absent/expired. */
   getToken(): string | null
   signOut(): void

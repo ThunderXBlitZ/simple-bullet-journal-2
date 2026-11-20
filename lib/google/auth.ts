@@ -1,6 +1,6 @@
 /** Google Identity Services (token model) implementation of AuthProvider. */
 
-import { persistGoogleToken, getPersistedGoogleToken, clearPersistedGoogleToken } from "../storage/zustand-adapter"
+import { purgeLegacyGoogleToken } from "../storage/zustand-adapter"
 import type { AuthProvider, AuthUser } from "../auth/types"
 import { GOOGLE_CLIENT_ID, GOOGLE_SCOPES } from "./config"
 
@@ -38,6 +38,7 @@ function loadScript(): Promise<void> {
 function init(): Promise<void> {
   initPromise ??= loadScript()
     .then(() => {
+      purgeLegacyGoogleToken()
       tokenClient = window.google!.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: GOOGLE_SCOPES.join(" "),
@@ -75,7 +76,6 @@ async function requestToken(opts: { prompt: string; hint?: string }): Promise<vo
   }
   accessToken = response.access_token
   expiryMs = Date.now() + (response.expires_in ?? 3600) * 1000
-  persistGoogleToken(accessToken, expiryMs)
 }
 
 async function fetchUserInfo(): Promise<AuthUser> {
@@ -88,7 +88,6 @@ async function fetchUserInfo(): Promise<AuthUser> {
 function clearToken(): void {
   accessToken = null
   expiryMs = 0
-  clearPersistedGoogleToken()
 }
 
 export const googleAuth: AuthProvider = {
@@ -114,14 +113,6 @@ export const googleAuth: AuthProvider = {
       return true
     } catch {
       return false
-    }
-  },
-
-  async restore() {
-    const stored = await getPersistedGoogleToken()
-    if (stored && Date.now() < stored.expiryMs - EXPIRY_BUFFER_MS) {
-      accessToken = stored.token
-      expiryMs = stored.expiryMs
     }
   },
 

@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Plus, X, Check } from "lucide-react"
+import { PlusIcon } from "@/components/icons/plus"
+import { XIcon } from "@/components/icons/x"
+import { CheckIcon } from "@/components/icons/check"
 import { useJournalStore } from "@/lib/journal-store"
 import { useShallow } from "zustand/react/shallow"
 import { tagPresets, tagColor } from "@/lib/tag-presets"
@@ -75,7 +77,7 @@ export function TagSelector({ selectedTagIds, onTagsChange }: TagSelectorProps) 
                 className="hover:opacity-70 transition-opacity"
                 title="Remove tag"
               >
-                <X className="w-3 h-3" />
+                <XIcon size={12} />
               </button>
             </div>
           ))}
@@ -87,7 +89,7 @@ export function TagSelector({ selectedTagIds, onTagsChange }: TagSelectorProps) 
         className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-border hover:bg-accent transition-colors"
         title="Add tags"
       >
-        <Plus className="w-3 h-3" />
+        <PlusIcon size={12} />
         Tags
       </button>
 
@@ -109,7 +111,7 @@ export function TagSelector({ selectedTagIds, onTagsChange }: TagSelectorProps) 
                 >
                   <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: tagColor(tag.color) }} />
                   <span className="text-foreground">{tag.name}</span>
-                  {selectedTagIds.includes(tag.id) && <Check className="ml-auto size-3" />}
+                  {selectedTagIds.includes(tag.id) && <CheckIcon size={12} className="ml-auto" />}
                 </button>
               ))
             )}

@@ -5,7 +5,10 @@ import type { BulletEntry, Tag } from "@/lib/types"
 import { BulletIcon } from "./bullet-icon"
 import { TagSelector } from "./tag-selector"
 import { cn } from "@/lib/utils"
-import { Trash2, Edit2, Check, X, GripVertical } from "lucide-react"
+import { Trash2, Edit2 } from "lucide-react"
+import { CheckIcon } from "@/components/icons/check"
+import { XIcon } from "@/components/icons/x"
+import { GripVerticalIcon } from "@/components/icons/grip-vertical"
 import { tagColor } from "@/lib/tag-presets"
 import { ClampedText } from "./clamped-text"
 import { useJournalStore } from "@/lib/journal-store"
@@ -131,14 +134,14 @@ export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, read
               onClick={handleSaveEdit}
               className="ml-auto text-xs bg-primary text-primary-foreground px-2 py-1 rounded hover:bg-primary/90 transition-colors flex items-center gap-1"
             >
-              <Check className="w-3 h-3" />
+              <CheckIcon size={12} />
               Save
             </button>
             <button
               onClick={handleCancelEdit}
               className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded hover:bg-muted/80 transition-colors flex items-center gap-1"
             >
-              <X className="w-3 h-3" />
+              <XIcon size={12} />
               Cancel
             </button>
           </div>
@@ -161,7 +164,7 @@ export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, read
                 className="mt-0.5 -ml-1 p-0.5 cursor-grab active:cursor-grabbing text-muted-foreground/60 hover:text-foreground flex-shrink-0"
                 aria-label="Drag to reorder"
               >
-                <GripVertical className="w-3.5 h-3.5" />
+                <GripVerticalIcon size={14} />
               </button>
             )}
             <BulletIcon type={entry.type} status={entry.status} onClick={isTask ? onCycleStatus : undefined} />

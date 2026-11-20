@@ -4,16 +4,10 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
-import {
-  CalendarDays,
-  CalendarRange,
-  CheckSquare,
-  List,
-  Menu,
-  ChevronLeft,
-  Command,
-  Settings,
-} from "lucide-react"
+import { CalendarRange, CheckSquare, List, Menu, Command, Settings } from "lucide-react"
+import { SettingsIcon } from "@/components/icons/settings"
+import { CalendarDaysIcon } from "@/components/icons/calendar-days"
+import { ChevronLeftIcon } from "@/components/icons/chevron-left"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
 import { useShallow } from "zustand/react/shallow"
@@ -31,9 +25,9 @@ interface SidebarProps {
 }
 
 const navItems: { id: View; label: string; icon: React.ReactNode }[] = [
-  { id: "daily", label: "Daily Log", icon: <CalendarDays className="w-4 h-4" /> },
+  { id: "daily", label: "Daily Log", icon: <CalendarDaysIcon size={16} /> },
   { id: "weekly", label: "Weekly", icon: <CalendarRange className="w-4 h-4" /> },
-  { id: "monthly", label: "Monthly", icon: <CalendarDays className="w-4 h-4" /> },
+  { id: "monthly", label: "Monthly", icon: <CalendarDaysIcon size={16} /> },
   { id: "habits", label: "Habits", icon: <CheckSquare className="w-4 h-4" /> },
   { id: "collections", label: "Collections", icon: <List className="w-4 h-4" /> },
 ]
@@ -68,7 +62,7 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="text-sidebar-foreground"
         >
-          {isCollapsed ? <Menu className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          {isCollapsed ? <Menu className="w-4 h-4" /> : <ChevronLeftIcon size={16} />}
         </Button>
       </div>
 
@@ -122,7 +116,7 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
           className={cn("w-full justify-start gap-3 text-sidebar-foreground text-sm", isCollapsed && "justify-center")}
           onClick={onOpenSettings}
         >
-          <Settings className="w-4 h-4" />
+          <SettingsIcon size={16} />
           {!isCollapsed && <span className="font-serif">Settings</span>}
         </Button>
 

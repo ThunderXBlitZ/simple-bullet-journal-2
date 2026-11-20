@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useRef, useLayoutEffect } from "react"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDownIcon } from "@/components/icons/chevron-down"
+import { ChevronUpIcon } from "@/components/icons/chevron-up"
 import { cn } from "@/lib/utils"
 
 interface ClampedTextProps {
@@ -44,7 +45,7 @@ export function ClampedText({ text, className, lines = 5 }: ClampedTextProps) {
           onClick={() => setExpanded((v) => !v)}
           className="mt-1 flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
         >
-          {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          {expanded ? <ChevronUpIcon size={12} /> : <ChevronDownIcon size={12} />}
           {expanded ? "Show less" : "Show more"}
         </button>
       )}

@@ -5,7 +5,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { LogOut, Maximize2, Minus, Minimize2, Moon, Plus, Sun } from "lucide-react"
+import { Minus } from "lucide-react"
+import { LogoutIcon } from "@/components/icons/logout"
+import { Maximize2Icon } from "@/components/icons/maximize-2"
+import { MinimizeIcon } from "@/components/icons/minimize"
+import { MoonIcon } from "@/components/icons/moon"
+import { PlusIcon } from "@/components/icons/plus"
+import { SunIcon } from "@/components/icons/sun"
 import { CheckIcon } from "@/components/icons/check"
 import { useTheme } from "next-themes"
 import { useJournalStore } from "@/lib/journal-store"
@@ -96,7 +102,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 onClick={() => toggleSetting("focusMode")}
                 aria-label={settings.focusMode ? "Exit focus mode" : "Enter focus mode"}
               >
-                {settings.focusMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                {settings.focusMode ? <MinimizeIcon size={16} /> : <Maximize2Icon size={16} />}
               </Button>
               <span role="tooltip" className="pointer-events-none absolute left-0 top-full z-50 mt-1 whitespace-nowrap rounded border border-border bg-popover px-2 py-1 text-xs text-popover-foreground opacity-0 transition-opacity group-hover:opacity-100">
                 Focus mode
@@ -108,7 +114,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </Button>
                 <span className="w-12 text-center text-sm">{Math.round(settings.zoomLevel * 100)}%</span>
                 <Button variant="outline" size="icon" onClick={() => setZoom(settings.zoomLevel + 0.1)} aria-label="Zoom in">
-                  <Plus className="w-4 h-4" />
+                  <PlusIcon size={16} />
                 </Button>
               </div>
               <Button
@@ -119,7 +125,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 aria-label="Toggle dark mode"
                 title="Dark / light"
               >
-                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {theme === "dark" ? <SunIcon size={16} /> : <MoonIcon size={16} />}
               </Button>
             </div>
           </div>
@@ -136,7 +142,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
           {/* Logout */}
           <Button onClick={() => setConfirmOpen(true)} variant="destructive" className="w-full">
-            <LogOut className="w-4 h-4 mr-2" />
+            <LogoutIcon size={16} className="mr-2" />
             Log out
           </Button>
         </div>

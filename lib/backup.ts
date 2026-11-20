@@ -16,7 +16,7 @@ export function downloadBackup(): void {
   a.href = url
   a.download = `bullet-journal-${localDateStr()}.json`
   a.click()
-  URL.revokeObjectURL(url)
+  setTimeout(() => URL.revokeObjectURL(url), 10_000) // Safari cancels the download if revoked synchronously
 }
 
 const recordIds = (d: JournalData): string[] => [
@@ -35,8 +35,13 @@ function withDroppedTombstones(local: JournalData, incoming: JournalData): Journ
   return { ...incoming, tombstones }
 }
 
+/** Real journals are well under 1 MB; this just stops a huge file freezing the tab. */
+export const MAX_IMPORT_BYTES = 10 * 1024 * 1024
+export const TOO_BIG = "That file is too large to be a Bullet Journal backup (limit 10 MB)."
+
 /** Throws a user-readable Error if the file isn't a valid backup; state is untouched on failure. */
 export function importBackup(json: string, mode: "merge" | "replace"): void {
+  if (json.length > MAX_IMPORT_BYTES) throw new Error(TOO_BIG)
   let parsed: unknown
   try { parsed = JSON.parse(json) } catch { throw new Error("That file isn't valid JSON.") }
   const result = backupSchema.safeParse(parsed)

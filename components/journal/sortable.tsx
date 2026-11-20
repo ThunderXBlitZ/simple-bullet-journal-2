@@ -4,7 +4,7 @@ import type { CSSProperties, ReactNode } from "react"
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core"
 import { SortableContext, useSortable, verticalListSortingStrategy, rectSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical } from "lucide-react"
+import { GripVerticalIcon } from "@/components/icons/grip-vertical"
 import { cn } from "@/lib/utils"
 
 interface SortableListProps {
@@ -57,7 +57,7 @@ export function SortableItem({ id, className, handleClassName, children, onClick
         style={{ touchAction: "none" }}
         className={cn("cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-foreground flex-shrink-0", handleClassName)}
       >
-        <GripVertical className="w-4 h-4" />
+        <GripVerticalIcon size={16} />
       </button>
       {children}
     </div>

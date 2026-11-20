@@ -169,6 +169,7 @@ export async function writeSyncFile(
 ): Promise<"ok" | "conflict"> {
   return withRetry(async () => {
     if (!expect.fileId) {
+      if (await findFile(FILE_NAME)) return "conflict" as const // created meanwhile (other device, or our retry after a lost response) → re-pull and merge
       await createFile(text)
       return "ok" as const
     }

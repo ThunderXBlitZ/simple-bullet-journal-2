@@ -3,7 +3,10 @@
 import { useState, useMemo } from "react"
 import { format } from "date-fns"
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { FolderOpen, Repeat, Search, Tag as TagIcon, X } from "lucide-react"
+import { Repeat, Tag as TagIcon } from "lucide-react"
+import { SearchIcon } from "@/components/icons/search"
+import { FolderOpenIcon } from "@/components/icons/folder-open"
+import { XIcon } from "@/components/icons/x"
 import { useJournalStore } from "@/lib/journal-store"
 import { useShallow } from "zustand/react/shallow"
 import { JournalIcon } from "@/components/journal/journal-icon"
@@ -64,7 +67,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPalett
           <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
             <TagIcon className="h-3 w-3" /> Entries tagged {activeTag.name}
             <button onClick={() => setTagFilter(null)} className="ml-auto hover:text-foreground" aria-label="Clear tag filter">
-              <X className="h-3 w-3" />
+              <XIcon size={12} />
             </button>
           </div>
         )}
@@ -74,7 +77,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPalett
           <CommandGroup heading="Entries">
             {results.entries.map((r) => (
               <CommandItem key={r.id} value={val(r.id)} onSelect={() => go("daily", { date: r.date })}>
-                <Search className="mr-2 h-4 w-4" />
+                <SearchIcon size={16} className="mr-2" />
                 <div className="flex flex-col min-w-0">
                   <span className="truncate">{r.content}</span>
                   <span className="text-xs text-muted-foreground">
@@ -101,7 +104,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPalett
           <CommandGroup heading="Collections">
             {results.collections.map(({ c, item }) => (
               <CommandItem key={c.id} value={val(c.id)} onSelect={() => go("collections", { collectionId: c.id })}>
-                <FolderOpen className="mr-2 h-4 w-4" />
+                <FolderOpenIcon size={16} className="mr-2" />
                 <div className="flex flex-col min-w-0">
                   <span className="truncate"><JournalIcon name={c.icon} size={14} className="mr-1.5 align-text-bottom" />{c.name}</span>
                   {item && !c.name.toLowerCase().includes(search.trim().toLowerCase()) && (

@@ -5,7 +5,8 @@ import { useDraggable } from "@dnd-kit/core"
 import type { BulletEntry, Habit } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { DroppableDay, type EntryDragData } from "./entry-dnd"
-import { Check, Diamond } from "lucide-react"
+import { Diamond } from "lucide-react"
+import { CheckIcon } from "@/components/icons/check"
 
 export interface DayData {
   dateStr: string
@@ -83,7 +84,7 @@ export function MonthlyDayCell({ day, data, inMonth, isToday, onOpenDay, onShowA
             <span key={t} className={glyphColor[t]}>{glyph[t]}{counts[t]}</span>
           ),
         )}
-        {habitCount > 0 && <span className="text-habit-complete inline-flex items-center"><Check className="size-3" />{habitCount}</span>}
+        {habitCount > 0 && <span className="text-habit-complete inline-flex items-center"><CheckIcon size={12} />{habitCount}</span>}
       </button>
 
       {/* Desktop: entry chips */}
@@ -93,7 +94,7 @@ export function MonthlyDayCell({ day, data, inMonth, isToday, onOpenDay, onShowA
         ))}
         {habits.slice(0, Math.max(0, 3 - entries.length)).map(({ habit, done }) => (
           <div key={habit.id} className="flex items-center gap-1 text-xs text-muted-foreground min-w-0">
-            <span className={cn("w-3 text-center text-habit-complete flex-shrink-0")}>{done ? <Check className="size-3" /> : <Diamond className="size-3" />}</span>
+            <span className={cn("w-3 text-center text-habit-complete flex-shrink-0")}>{done ? <CheckIcon size={12} /> : <Diamond className="size-3" />}</span>
             <span className={cn("truncate", done && "line-through")}>{habit.name}</span>
           </div>
         ))}
@@ -102,7 +103,7 @@ export function MonthlyDayCell({ day, data, inMonth, isToday, onOpenDay, onShowA
             +{total - 3} more
           </button>
         )}
-        {habitCount > 0 && habits.length === 0 && <span className="text-xs text-habit-complete inline-flex items-center gap-0.5"><Check className="size-3" />{habitCount}</span>}
+        {habitCount > 0 && habits.length === 0 && <span className="text-xs text-habit-complete inline-flex items-center gap-0.5"><CheckIcon size={12} />{habitCount}</span>}
       </div>
     </DroppableDay>
   )
