@@ -2,7 +2,7 @@ import { z } from "zod"
 import { useJournalStore } from "./journal-store"
 import { pickJournalData, type JournalData } from "./journal-data"
 import { mergeJournals } from "./sync/merge"
-import { localDateStr } from "./journal-helpers"
+import { localDateStr, nowIso } from "./journal-helpers"
 
 const iso = z.string().datetime()
 const entry = z.object({
@@ -34,6 +34,22 @@ export function downloadBackup(): void {
   URL.revokeObjectURL(url)
 }
 
+const recordIds = (d: JournalData): string[] => [
+  ...Object.values(d.dailyLogs).flatMap((l) => l.entries.map((e) => e.id)),
+  ...d.tags.map((t) => t.id),
+  ...d.habits.map((h) => h.id),
+  ...d.collections.flatMap((c) => [c.id, ...c.items.map((i) => i.id)]),
+]
+
+/** Replace must survive sync: tombstone every local record the backup lacks, or the next pull resurrects it. */
+function withDroppedTombstones(local: JournalData, incoming: JournalData): JournalData {
+  const keep = new Set(recordIds(incoming))
+  const at = nowIso()
+  const tombstones = { ...incoming.tombstones }
+  for (const id of recordIds(local)) if (!keep.has(id)) tombstones[id] = at
+  return { ...incoming, tombstones }
+}
+
 /** Throws a user-readable Error if the file isn't a valid backup; state is untouched on failure. */
 export function importBackup(json: string, mode: "merge" | "replace"): void {
   let parsed: unknown
@@ -41,6 +57,7 @@ export function importBackup(json: string, mode: "merge" | "replace"): void {
   const result = backupSchema.safeParse(parsed)
   if (!result.success) throw new Error("That file isn't a Bullet Journal backup (or is from an incompatible version).")
   const incoming = result.data.data as JournalData
-  const next = mode === "replace" ? incoming : mergeJournals(pickJournalData(useJournalStore.getState()), incoming)
+  const local = pickJournalData(useJournalStore.getState())
+  const next = mode === "replace" ? withDroppedTombstones(local, incoming) : mergeJournals(local, incoming)
   useJournalStore.setState(next)
 }
