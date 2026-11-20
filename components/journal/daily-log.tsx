@@ -89,10 +89,10 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
     >
       {/* Header */}
       <div className="pb-2 border-b border-border">
-        <div className="md:hidden mb-2 text-center font-serif text-sm font-semibold text-foreground">
-          {userName}'s Bullet Journal
-        </div>
         <div className="flex items-center justify-between gap-2">
+          <div className="md:hidden font-serif text-sm font-semibold text-foreground">
+            {userName}'s Bullet Journal
+          </div>
 
           {showMigrate && (
             <Button variant="outline" size="sm" onClick={handleMigrate} className="text-xs bg-transparent flex-shrink-0">
