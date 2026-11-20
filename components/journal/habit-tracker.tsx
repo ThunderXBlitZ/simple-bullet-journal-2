@@ -52,11 +52,11 @@ export function HabitTracker() {
       {/* Header */}
       <div className="pb-2 border-b border-border">
         <div className="flex items-center justify-between gap-2">
-          <div className="md:hidden font-serif text-sm font-semibold text-foreground">
-            {userName}'s Bullet Journal
+          <div className="md:hidden min-w-0 truncate font-serif text-base font-semibold text-foreground">
+            {userName}<span className="hidden min-[480px]:inline">'s Bullet Journal</span>
           </div>
 
-          <div className="flex items-center gap-1 md:gap-2 ml-auto">
+          <div className="flex items-center gap-1 md:gap-2 ml-auto shrink-0">
             <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={goPrevMonth}>
               <ChevronLeft className="w-4 h-4" />
             </Button>
