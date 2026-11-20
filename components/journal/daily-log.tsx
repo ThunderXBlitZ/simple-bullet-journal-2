@@ -5,6 +5,7 @@ import { format, addDays, subDays, isToday } from "date-fns"
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
+import { useShallow } from "zustand/react/shallow"
 import { getRandomQuote } from "@/lib/quotes"
 import type { BulletType } from "@/lib/types"
 import { EntryInput } from "./entry-input"
@@ -25,20 +26,8 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
   const [quote, setQuote] = useState(() => getRandomQuote())
   const dateStr = format(currentDate, "yyyy-MM-dd")
 
-  const {
-    getDailyLog,
-    addEntry,
-    updateEntry,
-    deleteEntry,
-    cycleStatus,
-    migrateIncompleteTasks,
-    settings,
-    reorderEntries,
-    userName,
-    habits,
-    habitCompletions,
-    toggleHabitCompletion,
-  } = useJournalStore()
+  const { getDailyLog, addEntry, updateEntry, deleteEntry, cycleStatus, migrateIncompleteTasks, settings, reorderEntries, userName, habits, habitCompletions, toggleHabitCompletion } = useJournalStore(useShallow((s) => ({ getDailyLog: s.getDailyLog, addEntry: s.addEntry, updateEntry: s.updateEntry, deleteEntry: s.deleteEntry, cycleStatus: s.cycleStatus, migrateIncompleteTasks: s.migrateIncompleteTasks, settings: s.settings, reorderEntries: s.reorderEntries, userName: s.userName, habits: s.habits, habitCompletions: s.habitCompletions, toggleHabitCompletion: s.toggleHabitCompletion })))
+  useJournalStore((s) => s.dailyLogs) // getDailyLog reads get(); subscribe so entry edits re-render
 
   const dailyLog = getDailyLog(dateStr)
   const dayHabits = getHabitsForDate(habits, dateStr)

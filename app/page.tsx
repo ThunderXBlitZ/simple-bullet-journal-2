@@ -14,6 +14,7 @@ import { SetupModal } from "@/components/journal/setup-modal"
 import { SettingsModal } from "@/components/journal/settings-modal"
 import { SyncBanner } from "@/components/journal/sync-banner"
 import { useJournalStore } from "@/lib/journal-store"
+import { useShallow } from "zustand/react/shallow"
 import { migrateLegacyStores } from "@/lib/storage/legacy-migration"
 import { onRemoteWrite } from "@/lib/storage/cross-tab"
 import { googleAuth } from "@/lib/google/auth"
@@ -31,7 +32,7 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [collectionId, setCollectionId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const { settings, toggleSetting, userName, setUserName } = useJournalStore()
+  const { settings, toggleSetting, userName, setUserName } = useJournalStore(useShallow((s) => ({ settings: s.settings, toggleSetting: s.toggleSetting, userName: s.userName, setUserName: s.setUserName })))
 
   // Migrate legacy stores, rehydrate, then mark mounted. Until this fires,
   // both server and client render the same empty shell (no mismatch).

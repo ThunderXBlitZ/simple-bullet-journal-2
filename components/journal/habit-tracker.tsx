@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { HabitForm } from "./habit-form"
 import { SortableItem, SortableList } from "./sortable"
 import { useJournalStore } from "@/lib/journal-store"
+import { useShallow } from "zustand/react/shallow"
 import { getRandomQuote } from "@/lib/quotes"
 import { cn } from "@/lib/utils"
 import { JournalIcon } from "@/components/journal/journal-icon"
@@ -16,7 +17,7 @@ export function HabitTracker() {
   const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [quote, setQuote] = useState(() => getRandomQuote())
-  const { habits, habitCompletions, addHabit, updateHabit, deleteHabit, toggleHabitCompletion, getHabitStreak, reorderHabits, userName } = useJournalStore()
+  const { habits, habitCompletions, addHabit, updateHabit, deleteHabit, toggleHabitCompletion, getHabitStreak, reorderHabits, userName } = useJournalStore(useShallow((s) => ({ habits: s.habits, habitCompletions: s.habitCompletions, addHabit: s.addHabit, updateHabit: s.updateHabit, deleteHabit: s.deleteHabit, toggleHabitCompletion: s.toggleHabitCompletion, getHabitStreak: s.getHabitStreak, reorderHabits: s.reorderHabits, userName: s.userName })))
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)

@@ -5,6 +5,7 @@ import { format, startOfWeek, addDays, subWeeks, addWeeks, isToday } from "date-
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
+import { useShallow } from "zustand/react/shallow"
 import { getRandomQuote } from "@/lib/quotes"
 import { DndContext, DragOverlay, type DragStartEvent, type DragEndEvent } from "@dnd-kit/core"
 import type { BulletEntry } from "@/lib/types"
@@ -19,7 +20,8 @@ interface WeeklyViewProps {
 export function WeeklyView({ onDateClick }: WeeklyViewProps = {}) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [quote, setQuote] = useState(() => getRandomQuote())
-  const { getDailyLog, updateEntry, deleteEntry, cycleStatus, moveEntry, habits, habitCompletions, userName } = useJournalStore()
+  const { getDailyLog, updateEntry, deleteEntry, cycleStatus, moveEntry, habits, habitCompletions, userName } = useJournalStore(useShallow((s) => ({ getDailyLog: s.getDailyLog, updateEntry: s.updateEntry, deleteEntry: s.deleteEntry, cycleStatus: s.cycleStatus, moveEntry: s.moveEntry, habits: s.habits, habitCompletions: s.habitCompletions, userName: s.userName })))
+  useJournalStore((s) => s.dailyLogs) // getDailyLog reads get(); subscribe so entry edits re-render
   const sensors = useEntrySensors()
   const [dragging, setDragging] = useState<BulletEntry | null>(null)
 

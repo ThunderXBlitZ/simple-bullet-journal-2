@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useJournalStore } from "@/lib/journal-store"
+import { useShallow } from "zustand/react/shallow"
 import { getRandomQuote } from "@/lib/quotes"
 import { randomPlaceholder } from "@/lib/placeholders"
 import { CollectionDetail } from "./collection-detail"
@@ -31,12 +32,7 @@ export function CollectionsView({ initialCollectionId = null }: { initialCollect
   const [placeholder, setPlaceholder] = useState(randomPlaceholder)
   const [quote, setQuote] = useState(() => getRandomQuote())
 
-  const {
-    collections,
-    addCollection,
-    deleteCollection,
-    reorderCollections,
-  } = useJournalStore()
+  const { collections, addCollection, deleteCollection, reorderCollections } = useJournalStore(useShallow((s) => ({ collections: s.collections, addCollection: s.addCollection, deleteCollection: s.deleteCollection, reorderCollections: s.reorderCollections })))
 
   const handleAddCollection = (name?: string, icon?: string) => {
     const finalName = name || newName.trim()

@@ -5,6 +5,7 @@ import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useJournalStore } from "@/lib/journal-store"
+import { useShallow } from "zustand/react/shallow"
 import { getRandomQuote } from "@/lib/quotes"
 import { cn } from "@/lib/utils"
 import { SortableItem, SortableList } from "./sortable"
@@ -13,7 +14,7 @@ import { JournalIcon } from "@/components/journal/journal-icon"
 export function CollectionDetail({ collectionId, onBack }: { collectionId: string; onBack: () => void }) {
   const [newItemContent, setNewItemContent] = useState("")
   const [quote] = useState(() => getRandomQuote())
-  const { collections, addCollectionItem, toggleCollectionItem, deleteCollectionItem, reorderCollectionItems } = useJournalStore()
+  const { collections, addCollectionItem, toggleCollectionItem, deleteCollectionItem, reorderCollectionItems } = useJournalStore(useShallow((s) => ({ collections: s.collections, addCollectionItem: s.addCollectionItem, toggleCollectionItem: s.toggleCollectionItem, deleteCollectionItem: s.deleteCollectionItem, reorderCollectionItems: s.reorderCollectionItems })))
   const collection = collections.find((c) => c.id === collectionId)
   if (!collection) return null
 

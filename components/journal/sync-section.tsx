@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { RefreshCWIcon } from "@/components/icons/refresh-cw"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
+import { useShallow } from "zustand/react/shallow"
 import { useSyncStatus } from "@/lib/sync/status"
 import { syncNow } from "@/lib/sync/engine"
 import { connectGoogle, reconnectGoogle } from "@/lib/sync/link"
@@ -17,7 +18,7 @@ const friendly = (e: unknown) => {
 }
 
 export function SyncSection() {
-  const { syncAccountId, googleEmail } = useJournalStore()
+  const { syncAccountId, googleEmail } = useJournalStore(useShallow((s) => ({ syncAccountId: s.syncAccountId, googleEmail: s.googleEmail })))
   const { status, message, lastSyncTime } = useSyncStatus()
   const [busy, setBusy] = useState(false)
   if (!GOOGLE_CLIENT_ID) return null

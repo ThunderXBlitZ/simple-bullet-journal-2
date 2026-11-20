@@ -16,6 +16,7 @@ import {
 import { ChevronLeft, ChevronRight, Check, Diamond } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
+import { useShallow } from "zustand/react/shallow"
 import { getRandomQuote } from "@/lib/quotes"
 import { cn } from "@/lib/utils"
 import { DndContext, DragOverlay, type DragStartEvent, type DragEndEvent } from "@dnd-kit/core"
@@ -33,7 +34,8 @@ interface MonthlyViewProps {
 export function MonthlyView({ onDateClick }: MonthlyViewProps = {}) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [quote, setQuote] = useState(() => getRandomQuote())
-  const { getDailyLog, habits, habitCompletions, moveEntry, userName } = useJournalStore()
+  const { getDailyLog, habits, habitCompletions, moveEntry, userName } = useJournalStore(useShallow((s) => ({ getDailyLog: s.getDailyLog, habits: s.habits, habitCompletions: s.habitCompletions, moveEntry: s.moveEntry, userName: s.userName })))
+  useJournalStore((s) => s.dailyLogs) // getDailyLog reads get(); subscribe so entry edits re-render
   const sensors = useEntrySensors()
   const [dragging, setDragging] = useState<BulletEntry | null>(null)
   const [dialogDate, setDialogDate] = useState<string | null>(null)

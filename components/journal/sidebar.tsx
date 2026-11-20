@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useJournalStore } from "@/lib/journal-store"
+import { useShallow } from "zustand/react/shallow"
 import { cn } from "@/lib/utils"
 import { JournalIcon } from "@/components/journal/journal-icon"
 
@@ -38,7 +39,7 @@ const navItems: { id: View; label: string; icon: React.ReactNode }[] = [
 ]
 
 export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettings, className }: SidebarProps) {
-  const { collections, userName } = useJournalStore()
+  const { collections, userName } = useJournalStore(useShallow((s) => ({ collections: s.collections, userName: s.userName })))
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [currentMonth, setCurrentMonth] = useState("")
 

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Plus, X, Check } from "lucide-react"
 import { useJournalStore } from "@/lib/journal-store"
+import { useShallow } from "zustand/react/shallow"
 import { tagPresets, tagColor } from "@/lib/tag-presets"
 import { cn } from "@/lib/utils"
 import type { Tag } from "@/lib/types"
@@ -13,7 +14,7 @@ interface TagSelectorProps {
 }
 
 export function TagSelector({ selectedTagIds, onTagsChange }: TagSelectorProps) {
-  const { tags, addTag } = useJournalStore()
+  const { tags, addTag } = useJournalStore(useShallow((s) => ({ tags: s.tags, addTag: s.addTag })))
   const [isOpen, setIsOpen] = useState(false)
   const [newTagName, setNewTagName] = useState("")
   const [selectedColor, setSelectedColor] = useState(tagPresets[0].color)

@@ -9,6 +9,7 @@ import { LogOut, Maximize2, Minus, Minimize2, Moon, Plus, Sun } from "lucide-rea
 import { CheckIcon } from "@/components/icons/check"
 import { useTheme } from "next-themes"
 import { useJournalStore } from "@/lib/journal-store"
+import { useShallow } from "zustand/react/shallow"
 import { googleAuth } from "@/lib/google/auth"
 import { SyncSection } from "./sync-section"
 import { BackupSection } from "./backup-section"
@@ -22,7 +23,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const { theme, setTheme } = useTheme()
-  const { userName, setUserName, resetStore, settings, toggleSetting, setZoom, syncAccountId } = useJournalStore()
+  const { userName, setUserName, resetStore, settings, toggleSetting, setZoom, syncAccountId } = useJournalStore(useShallow((s) => ({ userName: s.userName, setUserName: s.setUserName, resetStore: s.resetStore, settings: s.settings, toggleSetting: s.toggleSetting, setZoom: s.setZoom, syncAccountId: s.syncAccountId })))
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [nameInput, setNameInput] = useState(userName)
 

@@ -5,6 +5,7 @@ import { format } from "date-fns"
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { FolderOpen, Repeat, Search, Tag as TagIcon, X } from "lucide-react"
 import { useJournalStore } from "@/lib/journal-store"
+import { useShallow } from "zustand/react/shallow"
 import { JournalIcon } from "@/components/journal/journal-icon"
 
 interface CommandPaletteProps {
@@ -16,7 +17,7 @@ interface CommandPaletteProps {
 const MAX = 8
 
 export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPaletteProps) {
-  const { dailyLogs, habits, collections, tags } = useJournalStore()
+  const { dailyLogs, habits, collections, tags } = useJournalStore(useShallow((s) => ({ dailyLogs: s.dailyLogs, habits: s.habits, collections: s.collections, tags: s.tags })))
   const [search, setSearch] = useState("")
   const [tagFilter, setTagFilter] = useState<string | null>(null)
 

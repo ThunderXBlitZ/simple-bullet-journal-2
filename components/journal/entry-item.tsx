@@ -9,6 +9,7 @@ import { Trash2, Edit2, Check, X, GripVertical } from "lucide-react"
 import { tagColor } from "@/lib/tag-presets"
 import { ClampedText } from "./clamped-text"
 import { useJournalStore } from "@/lib/journal-store"
+import { useShallow } from "zustand/react/shallow"
 
 export interface EntryItemProps {
   entry: BulletEntry
@@ -31,7 +32,7 @@ export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, read
   const [editTagIds, setEditTagIds] = useState(entry.tagIds || [])
   const titleRef = useRef<HTMLInputElement>(null)
   const contentRef = useRef<HTMLTextAreaElement>(null)
-  const { addTagToEntry, removeTagFromEntry, tags } = useJournalStore()
+  const { addTagToEntry, removeTagFromEntry, tags } = useJournalStore(useShallow((s) => ({ addTagToEntry: s.addTagToEntry, removeTagFromEntry: s.removeTagFromEntry, tags: s.tags })))
 
   useEffect(() => {
     if (isEditing && titleRef.current) {
