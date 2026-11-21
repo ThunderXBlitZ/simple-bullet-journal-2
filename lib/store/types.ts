@@ -28,6 +28,7 @@ export interface JournalStore extends JournalState {
   deleteCollection: (collectionId: string) => void
   addCollectionItem: (collectionId: string, content: string) => void
   toggleCollectionItem: (collectionId: string, itemId: string) => void
+  updateCollectionItem: (collectionId: string, itemId: string, content: string) => void
   deleteCollectionItem: (collectionId: string, itemId: string) => void
   reorderCollectionItems: (collectionId: string, fromIndex: number, toIndex: number) => void
 

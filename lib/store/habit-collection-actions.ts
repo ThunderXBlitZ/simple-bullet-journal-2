@@ -3,7 +3,7 @@ import type { Slice } from "./types"
 
 export const habitCollectionActions: Slice<
   | "addHabit" | "updateHabit" | "deleteHabit" | "toggleHabitCompletion" | "reorderHabits"
-  | "addCollection" | "deleteCollection" | "addCollectionItem" | "toggleCollectionItem" | "deleteCollectionItem"
+  | "addCollection" | "deleteCollection" | "addCollectionItem" | "toggleCollectionItem" | "updateCollectionItem" | "deleteCollectionItem"
   | "reorderCollectionItems" | "reorderCollections"
 > = (set, get) => ({
       addHabit: (name, icon, color, date) => {
@@ -74,6 +74,16 @@ export const habitCollectionActions: Slice<
                   items: [...c.items, { id: newId(), content, completed: false, order: nextOrder(c.items), createdAt: now, updatedAt: now }],
                   updatedAt: now,
                 }
+              : c,
+          ),
+        }))
+      },
+
+      updateCollectionItem: (collectionId, itemId, content) => {
+        set((state) => ({
+          collections: state.collections.map((c) =>
+            c.id === collectionId
+              ? { ...c, items: c.items.map((i) => (i.id === itemId ? { ...i, content, updatedAt: nowIso() } : i)) }
               : c,
           ),
         }))

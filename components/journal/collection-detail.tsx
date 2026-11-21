@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Trash2 } from "lucide-react"
+import { useRef, useState } from "react"
+import { Trash2, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useJournalStore } from "@/lib/journal-store"
@@ -13,8 +13,11 @@ import { JournalIcon } from "@/components/journal/journal-icon"
 
 export function CollectionDetail({ collectionId, onBack }: { collectionId: string; onBack: () => void }) {
   const [newItemContent, setNewItemContent] = useState("")
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editContent, setEditContent] = useState("")
+  const cancelled = useRef(false)
   const [quote] = useState(() => getRandomQuote())
-  const { collections, addCollectionItem, toggleCollectionItem, deleteCollectionItem, reorderCollectionItems } = useJournalStore(useShallow((s) => ({ collections: s.collections, addCollectionItem: s.addCollectionItem, toggleCollectionItem: s.toggleCollectionItem, deleteCollectionItem: s.deleteCollectionItem, reorderCollectionItems: s.reorderCollectionItems })))
+  const { collections, addCollectionItem, toggleCollectionItem, updateCollectionItem, deleteCollectionItem, reorderCollectionItems } = useJournalStore(useShallow((s) => ({ collections: s.collections, addCollectionItem: s.addCollectionItem, toggleCollectionItem: s.toggleCollectionItem, updateCollectionItem: s.updateCollectionItem, deleteCollectionItem: s.deleteCollectionItem, reorderCollectionItems: s.reorderCollectionItems })))
   const collection = collections.find((c) => c.id === collectionId)
   if (!collection) return null
 
@@ -23,6 +26,11 @@ export function CollectionDetail({ collectionId, onBack }: { collectionId: strin
       addCollectionItem(collection.id, newItemContent.trim())
       setNewItemContent("")
     }
+  }
+
+  const saveEdit = (itemId: string) => {
+    if (!cancelled.current && editContent.trim()) updateCollectionItem(collection.id, itemId, editContent.trim())
+    setEditingId(null)
   }
 
   return (
@@ -65,7 +73,35 @@ export function CollectionDetail({ collectionId, onBack }: { collectionId: strin
                     </svg>
                   )}
                 </button>
-                <span className={cn("flex-1 font-serif", item.completed && "line-through opacity-60")}>{item.content}</span>
+                {editingId === item.id ? (
+                  <Input
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    onBlur={() => saveEdit(item.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveEdit(item.id)
+                      if (e.key === "Escape") {
+                        cancelled.current = true
+                        setEditingId(null)
+                      }
+                    }}
+                    className="flex-1 font-serif h-8"
+                    autoFocus
+                  />
+                ) : (
+                  <span className={cn("flex-1 font-serif", item.completed && "line-through opacity-60")}>{item.content}</span>
+                )}
+                <button
+                  onClick={() => {
+                    cancelled.current = false
+                    setEditingId(item.id)
+                    setEditContent(item.content)
+                  }}
+                  aria-label="Edit item"
+                  className="opacity-60 md:opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
                 <button
                   onClick={() => deleteCollectionItem(collection.id, item.id)}
                   className="opacity-60 md:opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive"
