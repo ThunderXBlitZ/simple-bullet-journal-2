@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { routes } from "@/lib/routes"
 import { Trash2 } from "lucide-react"
 import { CheckIcon } from "@/components/icons/check"
 import { Button } from "@/components/ui/button"
@@ -9,7 +11,6 @@ import { useJournalStore } from "@/lib/journal-store"
 import { useShallow } from "zustand/react/shallow"
 import { getRandomQuote } from "@/lib/quotes"
 import { randomPlaceholder } from "@/lib/placeholders"
-import { CollectionDetail } from "./collection-detail"
 import { SortableItem, SortableList } from "./sortable"
 import { cn } from "@/lib/utils"
 import { JournalIcon, ICON_CHOICES } from "@/components/journal/journal-icon"
@@ -25,13 +26,13 @@ const templateOptions = [
 
 const defaultIcons = ICON_CHOICES
 
-export function CollectionsView({ initialCollectionId = null }: { initialCollectionId?: string | null }) {
+export function CollectionsView() {
+  const router = useRouter()
   const [isAdding, setIsAdding] = useState(false)
   const [newName, setNewName] = useState("")
   const [selectedIcon, setSelectedIcon] = useState(defaultIcons[0])
-  const [selectedCollection, setSelectedCollection] = useState<string | null>(initialCollectionId)
   const [placeholder, setPlaceholder] = useState(randomPlaceholder)
-  const [quote, setQuote] = useState(() => getRandomQuote())
+  const [quote] = useState(() => getRandomQuote())
 
   const { collections, addCollection, deleteCollection, reorderCollections } = useJournalStore(useShallow((s) => ({ collections: s.collections, addCollection: s.addCollection, deleteCollection: s.deleteCollection, reorderCollections: s.reorderCollections })))
 
@@ -128,14 +129,6 @@ export function CollectionsView({ initialCollectionId = null }: { initialCollect
             <p className="text-lg font-serif">{quote}</p>
             <p className="text-xs text-muted-foreground/60">Create one to organize your world</p>
           </div>
-        ) : selectedCollection && collections.some((c) => c.id === selectedCollection) ? (
-          <CollectionDetail
-            collectionId={selectedCollection}
-            onBack={() => {
-              setSelectedCollection(null)
-              setQuote(getRandomQuote())
-            }}
-          />
         ) : (
           // Collections Grid
           <SortableList ids={collections.map((c) => c.id)} onReorder={reorderCollections} grid>
@@ -151,10 +144,7 @@ export function CollectionsView({ initialCollectionId = null }: { initialCollect
                   id={collection.id}
                   className="relative border border-border rounded-lg p-4 pt-6 bg-background hover:border-primary/50 transition-colors cursor-pointer group"
                   handleClassName="absolute top-1 left-1 p-0.5"
-                  onClick={() => {
-                    setSelectedCollection(collection.id)
-                    setQuote(getRandomQuote())
-                  }}
+                  onClick={() => router.push(routes.collection(collection.id))}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <JournalIcon name={collection.icon} size={28} />

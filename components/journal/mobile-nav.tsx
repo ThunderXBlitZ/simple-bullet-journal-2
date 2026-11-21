@@ -7,7 +7,7 @@ import { SettingsIcon } from "@/components/icons/settings"
 import { CalendarDaysIcon } from "@/components/icons/calendar-days"
 import { ChevronDownIcon } from "@/components/icons/chevron-down"
 
-type View = "daily" | "weekly" | "monthly" | "habits" | "collections"
+import type { View } from "@/lib/routes"
 
 interface MobileNavProps {
   currentView: View

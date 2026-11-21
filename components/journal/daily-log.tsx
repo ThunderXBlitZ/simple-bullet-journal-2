@@ -20,11 +20,11 @@ import { JournalIcon } from "@/components/journal/journal-icon"
 
 interface DailyLogProps {
   className?: string
-  initialDate?: Date
+  date: Date
+  onDateChange: (date: Date) => void
 }
 
-export function DailyLog({ className, initialDate }: DailyLogProps) {
-  const [currentDate, setCurrentDate] = useState(initialDate || new Date())
+export function DailyLog({ className, date: currentDate, onDateChange }: DailyLogProps) {
   const [quote, setQuote] = useState(() => getRandomQuote())
   const dateStr = format(currentDate, "yyyy-MM-dd")
 
@@ -43,15 +43,15 @@ export function DailyLog({ className, initialDate }: DailyLogProps) {
   }
 
   const goToToday = () => {
-    setCurrentDate(new Date())
+    onDateChange(new Date())
     setQuote(getRandomQuote())
   }
   const goPrevDay = () => {
-    setCurrentDate((d) => subDays(d, 1))
+    onDateChange(subDays(currentDate, 1))
     setQuote(getRandomQuote())
   }
   const goNextDay = () => {
-    setCurrentDate((d) => addDays(d, 1))
+    onDateChange(addDays(currentDate, 1))
     setQuote(getRandomQuote())
   }
 

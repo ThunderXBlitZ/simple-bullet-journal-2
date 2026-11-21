@@ -1,9 +1,10 @@
 # State
 
-Updated: 2026-11-20
+Updated: 2026-11-21
 
 - M1, M2, M3, M6, M7: done. M7 still needs manual verification (`docs/milestones/07-ux-polish.md`).
 - M4 restyle: partial. Done: emoji -> lucide-animated icons (`components/icons/`, `JournalIcon`), muted tag palette, outlines. Dead mood code removed.
+- M8 URL routing: implemented, typechecks; needs manual verification (`docs/milestones/08-url-routing.md` § Verify).
 - M5 month hints + tag filtering: **not done**.
 - Cleanup pass (items 1-17) done 2026-11-20; see CHANGELOG. Decision: tombstone TTL stays 90 days.
 

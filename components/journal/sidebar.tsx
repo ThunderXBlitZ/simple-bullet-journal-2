@@ -14,7 +14,7 @@ import { useShallow } from "zustand/react/shallow"
 import { cn } from "@/lib/utils"
 import { JournalIcon } from "@/components/journal/journal-icon"
 
-type View = "daily" | "weekly" | "monthly" | "habits" | "collections"
+import type { View } from "@/lib/routes"
 
 interface SidebarProps {
   currentView: View
