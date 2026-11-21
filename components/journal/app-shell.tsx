@@ -1,9 +1,8 @@
 "use client"
 
-import type React from "react"
-import { Suspense, useState, useEffect } from "react"
-import { useRouter, usePathname } from "next/navigation"
-import { routes, viewFromPath, type View } from "@/lib/routes"
+import { useState, useEffect } from "react"
+import { RouteView } from "@/components/journal/route-view"
+import { navigate, routes, useRoute, type View } from "@/lib/routes"
 import { XIcon } from "@/components/icons/x"
 import { Sidebar } from "@/components/journal/sidebar"
 import { MobileNav } from "@/components/journal/mobile-nav"
@@ -21,11 +20,11 @@ import { useSyncStatus } from "@/lib/sync/status"
 import { GOOGLE_CLIENT_ID } from "@/lib/google/config"
 import { cn } from "@/lib/utils"
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell() {
   const [mounted, setMounted] = useState(false)
-  const router = useRouter()
-  const currentView = viewFromPath(usePathname())
-  const setCurrentView = (view: View) => router.push(routes[view]())
+  const route = useRoute()
+  const currentView = route.view
+  const setCurrentView = (view: View) => navigate(routes[view]())
   const [commandOpen, setCommandOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const { settings, toggleSetting, userName, setUserName } = useJournalStore(useShallow((s) => ({ settings: s.settings, toggleSetting: s.toggleSetting, userName: s.userName, setUserName: s.setUserName })))
@@ -104,7 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onViewChange={setCurrentView}
             onOpenCommand={() => setCommandOpen(true)}
             onOpenSettings={() => setSettingsOpen(true)}
-            onOpenCollection={(id) => router.push(routes.collection(id))}
+            onOpenCollection={(id) => navigate(routes.collection(id))}
           />
         </div>
       )}
@@ -120,7 +119,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             "pb-16 md:pb-8", // Extra padding for mobile nav
           )}
         >
-          <div className="flex-1 overflow-y-auto max-w-4xl mx-auto w-full"><Suspense>{children}</Suspense></div>
+          <div className="flex-1 overflow-y-auto max-w-4xl mx-auto w-full"><RouteView route={route} /></div>
         </main>
       </div>
 
@@ -139,9 +138,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         open={commandOpen}
         onOpenChange={setCommandOpen}
         onNavigate={(view, target) => {
-          if (view === "daily") router.push(routes.daily(target?.date))
-          else if (view === "collections" && target?.collectionId) router.push(routes.collection(target.collectionId))
-          else router.push(routes[view as View]())
+          if (view === "daily") navigate(routes.daily(target?.date))
+          else if (view === "collections" && target?.collectionId) navigate(routes.collection(target.collectionId))
+          else navigate(routes[view as View]())
         }}
       />
 

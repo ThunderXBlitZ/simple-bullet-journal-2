@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { routes } from "@/lib/routes"
+import { navigate, routes } from "@/lib/routes"
 import { Trash2 } from "lucide-react"
 import { CheckIcon } from "@/components/icons/check"
 import { Button } from "@/components/ui/button"
@@ -27,7 +26,6 @@ const templateOptions = [
 const defaultIcons = ICON_CHOICES
 
 export function CollectionsView() {
-  const router = useRouter()
   const [isAdding, setIsAdding] = useState(false)
   const [newName, setNewName] = useState("")
   const [selectedIcon, setSelectedIcon] = useState(defaultIcons[0])
@@ -144,7 +142,7 @@ export function CollectionsView() {
                   id={collection.id}
                   className="relative border border-border rounded-lg p-4 pt-6 bg-background hover:border-primary/50 transition-colors cursor-pointer group"
                   handleClassName="absolute top-1 left-1 p-0.5"
-                  onClick={() => router.push(routes.collection(collection.id))}
+                  onClick={() => navigate(routes.collection(collection.id))}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <JournalIcon name={collection.icon} size={28} />

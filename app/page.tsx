@@ -1,11 +1,5 @@
-"use client"
-
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { routes } from "@/lib/routes"
+import { AppShell } from "@/components/journal/app-shell"
 
 export default function Home() {
-  const router = useRouter()
-  useEffect(() => router.replace(routes.daily()), [router])
-  return null
+  return <AppShell />
 }

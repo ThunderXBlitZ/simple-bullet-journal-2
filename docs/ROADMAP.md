@@ -10,6 +10,6 @@ Decisions: `docs/milestones/00-design-decisions.md`. Detail per milestone in `do
 | M6 | Google login + Drive per-record sync, account-switch replace | M3 |
 | M4 | UI restyle: muted tokens, outlines instead of fills, lucide-animated | M2 (M6 preferred first) |
 | M5 | Monthly hints + tag filtering | M4 |
-| M8 | URL routing: per-view routes, back/forward + refresh (`milestones/08-url-routing.md`) | M2 |
+| M8 | URL routing: hash routing, back/forward + refresh (`milestones/08-url-routing.md`) | M2 |
 
 Order: M1 -> M2 -> M3 -> M6 -> M4 -> M5. Ship M1 alone first. **Do not deploy between M3 and M6** (sync is off in between); M4/M5 are safe to deploy individually.
