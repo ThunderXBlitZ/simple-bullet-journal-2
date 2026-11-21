@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Trash2 } from "lucide-react"
-import { PlusIcon } from "@/components/icons/plus"
+import { CheckIcon } from "@/components/icons/check"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useJournalStore } from "@/lib/journal-store"
@@ -54,6 +54,7 @@ export function CollectionsView({ initialCollectionId = null }: { initialCollect
 
       {/* Add Collection Input */}
       <div className="px-0 py-2 border-b border-dashed border-border space-y-3">
+        <div className="flex items-center gap-2">
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
@@ -72,6 +73,12 @@ export function CollectionsView({ initialCollectionId = null }: { initialCollect
             }
           }}
         />
+        {newName.trim() && (
+          <Button size="icon" className="shrink-0" onClick={() => handleAddCollection()} aria-label="Create collection">
+            <CheckIcon size={16} />
+          </Button>
+        )}
+        </div>
 
         {newName.trim() && (
           <>
@@ -91,19 +98,6 @@ export function CollectionsView({ initialCollectionId = null }: { initialCollect
                   </button>
                 ))}
               </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button size="sm" onClick={() => handleAddCollection()}>
-                <PlusIcon size={12} className="mr-1" />
-                Create
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => {
-                setNewName("")
-                setIsAdding(false)
-              }}>
-                Cancel
-              </Button>
             </div>
 
             <div className="pt-2 border-t border-dashed border-border">

@@ -54,7 +54,7 @@ export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, read
   }
 
   const handleSaveEdit = () => {
-    if (editTitle.trim() && editContent.trim()) {
+    if (editTitle.trim()) {
       onUpdate({
         title: editTitle.trim(),
         content: editContent.trim(),
@@ -118,7 +118,7 @@ export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, read
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Description"
+                placeholder="Description (optional)"
                 rows={3}
                 className="bg-transparent border-none outline-none text-foreground font-serif text-base resize-none"
               />
@@ -174,7 +174,7 @@ export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, read
                   {entry.title}
                 </span>
               )}
-              <ClampedText text={entry.content} lines={lines} className={cn("font-serif text-base", isComplete && "line-through")} />
+              {entry.content && <ClampedText text={entry.content} lines={lines} className={cn("font-serif text-base", isComplete && "line-through")} />}
             </div>
 
             <div className="flex items-center gap-1">

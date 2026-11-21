@@ -5,7 +5,6 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, addMont
 import { Trash2, Pencil } from "lucide-react"
 import { ChevronLeftIcon } from "@/components/icons/chevron-left"
 import { ChevronRightIcon } from "@/components/icons/chevron-right"
-import { PlusIcon } from "@/components/icons/plus"
 import { FlameIcon } from "@/components/icons/flame"
 import { Button } from "@/components/ui/button"
 import { HabitForm } from "./habit-form"
@@ -20,7 +19,7 @@ import { JournalIcon } from "@/components/journal/journal-icon"
 
 export function HabitTracker() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
-  const [isAdding, setIsAdding] = useState(false)
+  const [formKey, setFormKey] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [quote, setQuote] = useState(() => getRandomQuote())
   const { habits, habitCompletions, addHabit, updateHabit, deleteHabit, toggleHabitCompletion, reorderHabits, userName } = useJournalStore(useShallow((s) => ({ habits: s.habits, habitCompletions: s.habitCompletions, addHabit: s.addHabit, updateHabit: s.updateHabit, deleteHabit: s.deleteHabit, toggleHabitCompletion: s.toggleHabitCompletion, reorderHabits: s.reorderHabits, userName: s.userName })))
@@ -81,20 +80,10 @@ export function HabitTracker() {
 
       {/* Add / Edit Habit */}
       <div className="px-0 py-2 border-b border-dashed border-border space-y-3">
-        {isAdding ? (
-          <HabitForm
-            submitLabel="Add Habit"
-            onCancel={() => setIsAdding(false)}
-            onSubmit={(d) => {
-              addHabit(d.name, d.icon, d.color, d.date)
-              setIsAdding(false)
-            }}
-          />
-        ) : editingHabit ? (
+        {editingHabit ? (
           <HabitForm
             key={editingHabit.id}
             initial={editingHabit}
-            submitLabel="Save"
             onCancel={() => setEditingId(null)}
             onSubmit={(d) => {
               updateHabit(editingHabit.id, d)
@@ -102,10 +91,13 @@ export function HabitTracker() {
             }}
           />
         ) : (
-          <Button size="sm" variant="outline" onClick={() => setIsAdding(true)}>
-            <PlusIcon size={12} className="mr-1" />
-            New habit
-          </Button>
+          <HabitForm
+            key={formKey}
+            onSubmit={(d) => {
+              addHabit(d.name, d.icon, d.color)
+              setFormKey((k) => k + 1)
+            }}
+          />
         )}
       </div>
 
@@ -154,8 +146,7 @@ export function HabitTracker() {
                 >
                   <div className="w-40 shrink-0 flex items-center gap-2 pr-2 truncate">
                     <JournalIcon name={habit.icon} />
-                    <span className="font-serif text-sm truncate" title={habit.date ? `${habit.name} · ${habit.date}` : habit.name}>{habit.name}</span>
-                    {habit.date && <span className="text-[10px] font-mono text-muted-foreground border border-border rounded px-1">{habit.date.slice(5)}</span>}
+                    <span className="font-serif text-sm truncate" title={habit.name}>{habit.name}</span>
                   </div>
 
                   {days.map((day) => {
@@ -202,10 +193,7 @@ export function HabitTracker() {
 
                   <div className="w-14 shrink-0 flex opacity-60 md:opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
-                      onClick={() => {
-                        setIsAdding(false)
-                        setEditingId(habit.id)
-                      }}
+                      onClick={() => setEditingId(habit.id)}
                       className="p-1 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
                       aria-label="Edit habit"
                     >

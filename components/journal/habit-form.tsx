@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { PlusIcon } from "@/components/icons/plus"
+import { CheckIcon } from "@/components/icons/check"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { randomPlaceholder } from "@/lib/placeholders"
@@ -16,30 +16,28 @@ export interface HabitDraft {
   name: string
   icon: string
   color: string
-  date?: string
 }
 
 interface HabitFormProps {
   initial?: HabitDraft
-  submitLabel: string
   onSubmit: (draft: HabitDraft) => void
-  onCancel: () => void
+  onCancel?: () => void
 }
 
 /** Create/edit form. Mounted fresh each time it opens, so the placeholder is re-rolled per open. */
-export function HabitForm({ initial, submitLabel, onSubmit, onCancel }: HabitFormProps) {
+export function HabitForm({ initial, onSubmit, onCancel }: HabitFormProps) {
   const [name, setName] = useState(initial?.name ?? "")
   const [icon, setIcon] = useState(initial?.icon ?? habitIcons[0])
   const [color, setColor] = useState(initial?.color ? tagColor(initial.color) : habitColors[0])
-  const [date, setDate] = useState(initial?.date ?? "")
   const [placeholder] = useState(randomPlaceholder)
 
   const submit = () => {
-    if (name.trim()) onSubmit({ name: name.trim(), icon, color, date: date || undefined })
+    if (name.trim()) onSubmit({ name: name.trim(), icon, color })
   }
 
   return (
     <div className="space-y-3">
+      <div className="flex items-center gap-2">
       <Input
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -48,9 +46,16 @@ export function HabitForm({ initial, submitLabel, onSubmit, onCancel }: HabitFor
         autoFocus
         onKeyDown={(e) => {
           if (e.key === "Enter") submit()
-          if (e.key === "Escape") onCancel()
+          if (e.key === "Escape") onCancel?.()
         }}
       />
+      {name.trim() && (
+        <Button size="icon" className="shrink-0" onClick={submit} aria-label="Save habit">
+          <CheckIcon size={16} />
+        </Button>
+      )}
+      </div>
+      {name.trim() && (<>
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-sm text-muted-foreground">Icon:</span>
         <div className="flex gap-1 flex-wrap">
@@ -78,24 +83,7 @@ export function HabitForm({ initial, submitLabel, onSubmit, onCancel }: HabitFor
           ))}
         </div>
       </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-muted-foreground">Date (optional):</span>
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-auto font-mono" />
-        {date && (
-          <Button size="sm" variant="ghost" onClick={() => setDate("")}>
-            Clear
-          </Button>
-        )}
-      </div>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={submit}>
-          <PlusIcon size={12} className="mr-1" />
-          {submitLabel}
-        </Button>
-        <Button size="sm" variant="ghost" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
+      </>)}
     </div>
   )
 }

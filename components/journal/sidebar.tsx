@@ -53,7 +53,9 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         {!isCollapsed && (
           <h1 className="font-serif text-lg font-semibold text-sidebar-foreground">
-            {userName}'s Bullet Journal
+            <button type="button" onClick={onOpenSettings} className="text-left cursor-pointer">
+              {userName}'s<br />Bullet Journal
+            </button>
           </h1>
         )}
         <Button

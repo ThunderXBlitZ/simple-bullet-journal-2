@@ -60,7 +60,7 @@ export function EntryInput({
   }
 
   const handleSubmit = () => {
-    if (title.trim() && content.trim()) {
+    if (title.trim()) {
       onSubmit(type, content.trim(), indent, selectedTagIds, title.trim())
       setTitle("")
       setContent("")
@@ -93,7 +93,7 @@ export function EntryInput({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Description"
+              placeholder="Description (optional)"
               rows={3}
               className="bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 font-serif text-base resize-none"
             />
@@ -104,13 +104,7 @@ export function EntryInput({
         {title.trim() && (
           <button
             onClick={handleSubmit}
-            disabled={!content.trim()}
-            className={cn(
-              "flex-shrink-0 p-2 rounded transition-colors",
-              content.trim()
-                ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                : "bg-muted text-muted-foreground cursor-not-allowed"
-            )}
+            className="flex-shrink-0 p-2 rounded transition-colors bg-primary text-primary-foreground hover:bg-primary/90"
             title="Save entry"
           >
             <CheckIcon size={16} />
@@ -119,7 +113,7 @@ export function EntryInput({
       </div>
 
       {/* Actions Row - Tags and hint text */}
-      {title.trim() && content.trim() && (
+      {title.trim() && (
         <>
           <div className="flex items-center gap-2 ml-6">
             <span className="text-xs text-muted-foreground">
