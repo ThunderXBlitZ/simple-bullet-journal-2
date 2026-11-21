@@ -31,6 +31,7 @@ export default function Home() {
   const [commandOpen, setCommandOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [collectionId, setCollectionId] = useState<string | null>(null)
+  const [collectionNonce, setCollectionNonce] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const { settings, toggleSetting, userName, setUserName } = useJournalStore(useShallow((s) => ({ settings: s.settings, toggleSetting: s.toggleSetting, userName: s.userName, setUserName: s.setUserName })))
 
@@ -102,7 +103,7 @@ export default function Home() {
       case "habits":
         return <HabitTracker />
       case "collections":
-        return <CollectionsView key={collectionId ?? "all"} initialCollectionId={collectionId} />
+        return <CollectionsView key={`${collectionId ?? "all"}-${collectionNonce}`} initialCollectionId={collectionId} />
       default:
         return <DailyLog initialDate={selectedDate} />
     }
@@ -130,6 +131,11 @@ export default function Home() {
             onViewChange={setCurrentView}
             onOpenCommand={() => setCommandOpen(true)}
             onOpenSettings={() => setSettingsOpen(true)}
+            onOpenCollection={(id) => {
+              setCollectionId(id)
+              setCollectionNonce((n) => n + 1)
+              setCurrentView("collections")
+            }}
           />
         </div>
       )}

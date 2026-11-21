@@ -21,6 +21,7 @@ interface SidebarProps {
   onViewChange: (view: View) => void
   onOpenCommand: () => void
   onOpenSettings: () => void
+  onOpenCollection: (id: string) => void
   className?: string
 }
 
@@ -32,7 +33,7 @@ const navItems: { id: View; label: string; icon: React.ReactNode }[] = [
   { id: "collections", label: "Collections", icon: <List className="w-4 h-4" /> },
 ]
 
-export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettings, className }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettings, onOpenCollection, className }: SidebarProps) {
   const { collections, userName } = useJournalStore(useShallow((s) => ({ collections: s.collections, userName: s.userName })))
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [currentMonth, setCurrentMonth] = useState("")
@@ -89,9 +90,14 @@ export function Sidebar({ currentView, onViewChange, onOpenCommand, onOpenSettin
         {currentView === "collections" && !isCollapsed && collections.length > 0 && (
           <div className="pl-7 space-y-1 mt-1">
             {collections.map((collection) => (
-              <div key={collection.id} className="text-sm text-sidebar-foreground/70 py-1 px-2 truncate">
+              <button
+                key={collection.id}
+                type="button"
+                onClick={() => onOpenCollection(collection.id)}
+                className="block w-full text-left text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground py-1 px-2 truncate cursor-pointer"
+              >
                 <JournalIcon name={collection.icon} size={14} className="mr-1.5 align-text-bottom" />{collection.name}
-              </div>
+              </button>
             ))}
           </div>
         )}
