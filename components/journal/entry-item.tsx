@@ -107,6 +107,7 @@ export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, read
               <input
                 ref={titleRef}
                 autoComplete="off"
+                name="entry-title"
                 type="text"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
@@ -117,6 +118,7 @@ export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, read
               <textarea
                 ref={contentRef}
                 autoComplete="off"
+                name="entry-notes"
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
                 onKeyDown={handleKeyDown}

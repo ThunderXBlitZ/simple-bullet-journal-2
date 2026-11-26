@@ -79,6 +79,7 @@ export function EntryInput({
           <input
             ref={titleRef}
             autoComplete="off"
+            name="entry-title"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -92,6 +93,7 @@ export function EntryInput({
             <textarea
               ref={descriptionRef}
               autoComplete="off"
+              name="entry-notes"
               value={content}
               onChange={(e) => setContent(e.target.value)}
               onKeyDown={handleKeyDown}

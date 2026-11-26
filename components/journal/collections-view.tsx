@@ -56,6 +56,7 @@ export function CollectionsView() {
         <div className="flex items-center gap-2">
         <Input
           autoComplete="off"
+          name="collection-label"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder={placeholder}

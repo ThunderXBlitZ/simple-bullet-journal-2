@@ -40,6 +40,7 @@ export function HabitForm({ initial, onSubmit, onCancel }: HabitFormProps) {
       <div className="flex items-center gap-2">
       <Input
         autoComplete="off"
+        name="habit-label"
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder={placeholder}

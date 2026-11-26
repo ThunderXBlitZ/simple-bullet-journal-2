@@ -61,7 +61,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPalett
         onOpenChange(o)
       }}
     >
-      <CommandInput autoComplete="off" placeholder="Search entries, habits, collections, tags..." value={search} onValueChange={setSearch} />
+      <CommandInput autoComplete="off" name="palette-query" placeholder="Search entries, habits, collections, tags..." value={search} onValueChange={setSearch} />
       <CommandList>
         {activeTag && (
           <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">

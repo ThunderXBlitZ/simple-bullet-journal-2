@@ -71,6 +71,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <Input
                 type="text"
                 autoComplete="off"
+                name="journal-owner"
                 placeholder="Enter your name..."
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
