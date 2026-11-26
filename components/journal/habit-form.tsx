@@ -39,6 +39,7 @@ export function HabitForm({ initial, onSubmit, onCancel }: HabitFormProps) {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
       <Input
+        autoComplete="off"
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder={placeholder}

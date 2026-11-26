@@ -36,7 +36,7 @@ export function SetupModal({ open, onComplete }: SetupModalProps) {
           <DialogTitle className="font-serif text-2xl">Welcome to your journal</DialogTitle>
           <DialogDescription>What should we call you? You can change it later in Settings.</DialogDescription>
         </DialogHeader>
-        <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="Your name" />
+        <Input autoFocus autoComplete="off" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="Your name" />
         <Button onClick={submit} disabled={!name.trim()}>Start journaling</Button>
         {GOOGLE_CLIENT_ID && (
           <Button variant="outline" onClick={restore} disabled={busy}>Restore from Google Drive</Button>

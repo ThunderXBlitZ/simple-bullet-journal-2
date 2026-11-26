@@ -70,6 +70,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             <div className="flex items-center gap-2">
               <Input
                 type="text"
+                autoComplete="off"
                 placeholder="Enter your name..."
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}

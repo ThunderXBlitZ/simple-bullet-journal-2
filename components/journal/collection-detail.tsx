@@ -75,6 +75,7 @@ export function CollectionDetail({ collectionId, onBack }: { collectionId: strin
                 </button>
                 {editingId === item.id ? (
                   <Input
+                    autoComplete="off"
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
                     onBlur={() => saveEdit(item.id)}
@@ -116,6 +117,7 @@ export function CollectionDetail({ collectionId, onBack }: { collectionId: strin
 
       <div className="flex gap-2">
         <Input
+          autoComplete="off"
           value={newItemContent}
           onChange={(e) => setNewItemContent(e.target.value)}
           placeholder="Add an item..."

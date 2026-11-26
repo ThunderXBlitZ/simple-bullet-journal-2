@@ -106,6 +106,7 @@ export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, read
             <div className="flex-1 flex flex-col gap-2 pb-4">
               <input
                 ref={titleRef}
+                autoComplete="off"
                 type="text"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
@@ -115,6 +116,7 @@ export function EntryItem({ entry, onUpdate, onDelete, onCycleStatus, date, read
               />
               <textarea
                 ref={contentRef}
+                autoComplete="off"
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
                 onKeyDown={handleKeyDown}
